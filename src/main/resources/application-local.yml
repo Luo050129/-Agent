@@ -1,0 +1,28 @@
+# ============================================================
+# 本地演示模式（--spring.profiles.active=local）
+# 无需 Docker/PostgreSQL：H2(PostgreSQL 兼容模式) + 本机 Redis
+# 核心闭环可用：简历上传→AI 分析→模拟面试→总结→PDF 报告
+# 知识库 RAG 关闭（app.rag.enabled=false），完整模式见默认 profile + docker compose
+# ============================================================
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/interview_local;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+
+  flyway:
+    enabled: false
+
+  jpa:
+    hibernate:
+      # H2 演示模式由 Hibernate 自动建表（4 张实体表，不含 pgvector 向量表）
+      ddl-auto: update
+
+app:
+  rag:
+    enabled: false
+
+logging:
+  level:
+    com.baishan.interview: INFO

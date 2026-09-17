@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>白山面试辅助 Agent</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">⛰️</span>
+    <div>
+      <h1>白山面试辅助 Agent</h1>
+      <p>简历分析 · 模拟面试 · 知识库问答 · 报告导出</p>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="tab active" data-tab="resume">简历分析</button>
+    <button class="tab" data-tab="interview">模拟面试</button>
+    <button class="tab" data-tab="knowledge">知识库</button>
+    <button class="tab" data-tab="qa">智能问答</button>
+  </div>
+</header>
+
+<main>
+  <!-- ==================== 简历分析 ==================== -->
+  <section id="tab-resume" class="panel active">
+    <div class="card">
+      <h2>上传简历</h2>
+      <p class="hint">支持 PDF / Word / TXT / Markdown，最大 10MB。上传后点击「AI 分析」生成结构化评估。</p>
+      <div class="upload-row">
+        <input type="file" id="resume-file" accept=".pdf,.doc,.docx,.txt,.md,.rtf">
+        <button id="btn-upload-resume" class="primary">上传</button>
+      </div>
+      <div id="resume-list" class="list"></div>
+    </div>
+    <div id="analysis-card" class="card hidden">
+      <div class="analysis-head">
+        <div>
+          <h2 id="an-name">候选人</h2>
+          <p id="an-position" class="muted"></p>
+        </div>
+        <div class="score-badge" id="an-score">--</div>
+      </div>
+      <p id="an-summary" class="summary"></p>
+      <h3>技能</h3><div id="an-skills" class="chips"></div>
+      <div class="two-col">
+        <div><h3>👍 优势</h3><ul id="an-strengths"></ul></div>
+        <div><h3>👎 不足</h3><ul id="an-weaknesses"></ul></div>
+      </div>
+      <h3>💡 改进建议</h3><ul id="an-suggestions"></ul>
+      <h3>维度评分</h3><div id="an-dims"></div>
+      <div class="actions">
+        <button id="btn-start-interview" class="primary">用它开始模拟面试 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 模拟面试 ==================== -->
+  <section id="tab-interview" class="panel">
+    <div class="card">
+      <h2>模拟面试设置</h2>
+      <label>面试模式</label>
+      <select id="iv-mode">
+        <option value="MIXED">综合面</option>
+        <option value="TECHNICAL">技术面</option>
+        <option value="BEHAVIORAL">行为面</option>
+      </select>
+      <p class="hint">当前简历：<strong id="iv-current-resume">未选择（请先在「简历分析」上传并分析）</strong></p>
+      <label>岗位描述（JD，选填）</label>
+      <textarea id="iv-jd" rows="4" placeholder="粘贴目标岗位 JD，面试官将据此出题……"></textarea>
+      <div class="actions">
+        <button id="btn-create-session" class="primary" disabled>开始面试</button>
+        <button id="btn-finish" class="ghost hidden">结束并生成总结</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>面试对话 <span id="iv-progress" class="muted"></span></h2>
+      <div id="chat-box" class="chat-box">
+        <div class="msg system">请先上传并分析简历，再开始模拟面试。</div>
+      </div>
+      <div id="answer-area" class="hidden">
+        <textarea id="iv-answer" rows="3" placeholder="输入你的回答……"></textarea>
+        <div class="actions">
+          <button id="btn-submit-answer" class="primary">提交回答</button>
+        </div>
+      </div>
+      <div id="eval-box" class="hidden">
+        <h3>📋 本回答评估</h3>
+        <div id="eval-body"></div>
+      </div>
+      <div id="summary-box" class="hidden">
+        <h3>🏁 面试总结</h3>
+        <div id="summary-body"></div>
+        <div class="actions">
+          <a id="btn-download-pdf" class="primary link-btn" target="_blank">下载 PDF 报告</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 知识库 ==================== -->
+  <section id="tab-knowledge" class="panel">
+    <div class="card">
+      <h2>知识库</h2>
+      <p class="hint">上传企业介绍、岗位说明等参考资料，面试与问答 Agent 会自动检索引用。</p>
+      <div class="upload-row">
+        <input type="file" id="kb-file" accept=".pdf,.doc,.docx,.txt,.md,.rtf">
+        <button id="btn-upload-kb" class="primary">上传入库</button>
+      </div>
+      <div id="kb-list" class="list"></div>
+    </div>
+    <div class="card">
+      <h2>语义检索</h2>
+      <div class="upload-row">
+        <input type="text" id="kb-query" placeholder="输入查询，如：公司主营业务是什么？">
+        <button id="btn-kb-search" class="primary">检索</button>
+      </div>
+      <div id="kb-results" class="list"></div>
+    </div>
+  </section>
+
+  <!-- ==================== 智能问答 ==================== -->
+  <section id="tab-qa" class="panel">
+    <div class="card">
+      <h2>智能问答 Agent</h2>
+      <p class="hint">可自动检索知识库与简历信息后作答（支持工具调用）。</p>
+      <div class="upload-row">
+        <select id="qa-resume" title="关联简历（可选）"><option value="">不关联简历</option></select>
+      </div>
+      <div id="qa-box" class="chat-box"></div>
+      <div class="upload-row">
+        <input type="text" id="qa-input" placeholder="输入问题，如：根据我的简历，我适合什么岗位？">
+        <button id="btn-qa-send" class="primary">发送</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>白山面试辅助 Agent · Spring Boot 4 + Spring AI 2 + pgvector · 简历评估与模拟面试</footer>
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body>
+</html>

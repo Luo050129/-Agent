@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.8'
+    // Boot 4 的 Gradle 插件不再自动提供依赖管理，需显式声明
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.baishan'
+version = '1.0.0'
+description = '白山面试辅助 Agent —— 基于大语言模型的简历分析与模拟面试系统'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    springAiVersion = '2.0.1'
+    itextVersion = '8.0.5'
+    tikaVersion = '4.0.0'
+}
+
+dependencies {
+    // ---- Spring Boot 基础 ----
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // 提供 Reactor Flux 等响应式类型（MVC 流式 SSE 依赖）
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // ---- Spring AI 2.0（OpenAI 兼容：chat 可指向 DeepSeek / embedding 可指向任意兼容端点）----
+    implementation platform("org.springframework.ai:spring-ai-bom:${springAiVersion}")
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
+    // ---- 数据层 ----
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+    // 本地演示模式（profile=local）：无需 Docker/PG，H2 PostgreSQL 兼容模式
+    runtimeOnly 'com.h2database:h2'
+
+    // ---- 文档解析（Tika）----
+    implementation "org.apache.tika:tika-core:${tikaVersion}"
+    implementation "org.apache.tika:tika-parsers-standard-package:${tikaVersion}"
+
+    // ---- PDF 报告（iText 8）----
+    implementation "com.itextpdf:kernel:${itextVersion}"
+    implementation "com.itextpdf:io:${itextVersion}"
+    implementation "com.itextpdf:layout:${itextVersion}"
+    implementation "com.itextpdf:font-asian:${itextVersion}"
+
+    // ---- 测试 ----
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // 上下文冒烟测试用（H2 PG 兼容模式，无需真实数据库）
+    testImplementation 'com.h2database:h2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('bootJar') {
+    archiveFileName = 'baishan-interview-agent.jar'
+}

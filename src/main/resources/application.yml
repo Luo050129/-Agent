@@ -1,0 +1,92 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: baishan-interview-agent
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/interview_agent}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Shanghai
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3s
+
+  cache:
+    type: redis
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 30MB
+
+  ai:
+    # 聊天模型使用 OpenAI 兼容协议（默认指向 DeepSeek）
+    model:
+      chat: openai
+      embedding: openai
+    openai:
+      api-key: ${AI_API_KEY:}
+      base-url: ${AI_BASE_URL:https://api.deepseek.com}
+      timeout:
+        connect: 30s
+        read: 180s
+      chat:
+        model: ${AI_CHAT_MODEL:deepseek-v4-flash}
+        temperature: 0.7
+        max-tokens: 4096
+        # DeepSeek v4 默认开启思考模式；关闭以获得更快的流式首字响应
+        extra-body:
+          thinking:
+            type: disabled
+      # embedding 可独立指向任意 OpenAI 兼容向量端点（如 SiliconFlow / DashScope）
+      embedding:
+        api-key: ${EMBEDDING_API_KEY:}
+        base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn/v1}
+        model: ${EMBEDDING_MODEL:BAAI/bge-m3}
+
+app:
+  interview:
+    # 每场面试默认问题数
+    question-count: 5
+    # 答题内容最大字符数
+    max-answer-length: 5000
+  rag:
+    # 知识库分块大小（字符）与重叠
+    chunk-size: 500
+    chunk-overlap: 80
+    # 检索 Top-K
+    top-k: 4
+    # 向量维度（须与 V1__init.sql 中 vector(N) 一致；bge-m3 / text-embedding-v3 均为 1024）
+    embedding-dimensions: 1024
+  upload:
+    # 支持格式：pdf / docx / doc / txt / md；单位：字节（10MB）
+    max-file-size: 10485760
+
+logging:
+  level:
+    com.baishan.interview: INFO
+    org.springframework.ai: INFO

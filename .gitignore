@@ -1,0 +1,22 @@
+.gradle/
+build/
+out/
+bin/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+# 本机 agent 工作记忆（内部日志/笔记，非项目源码，勿入库）
+.workbuddy/
+*.log
+data/
+tools/
+# 本地环境变量（如需提交模板请改用 .env.example）
+.env
+.env.local
+# 本地生成的解析/题库文档（非源码，且可能含项目内部笔记）
+KONWLEDGE/
+# 真实简历/面试产物（含个人简历 PDF、H2 数据库，绝不入库）
+*.pdf
+*.mv.db
+*.lock.db
