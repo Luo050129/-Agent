@@ -74,7 +74,20 @@
 
 ## 快速开始
 
-### 0. 本地演示模式
+### 0. 一键启动脚本（推荐）
+
+项目提供开箱即用的启动脚本，自动处理 JDK 21 定位、Redis 启动、jar 构建与浏览器打开：
+
+| 脚本 | 平台 | 模式 | 说明 |
+|---|---|---|---|
+| `start-local.cmd` | Windows | 本地演示（H2 + 本机 Redis，RAG 关闭） | 双击即可；Redis 未运行会自动拉起 |
+| `start-full.cmd` | Windows | 完整（Docker: PostgreSQL+pgvector，RAG 开启） | 一键拉起向量库并启动，可演示知识库检索 |
+| `start.sh [local\|full]` | macOS / Linux | 本地 / 完整 | 跨平台等价实现 |
+
+> 脚本会读取 `gradle.properties` 的 `org.gradle.java.home` 定位 JDK 21，即使系统默认 `java` 指向 Java 8 也能正确运行。
+> 不论哪种模式，都需先配置 `AI_API_KEY` / `EMBEDDING_API_KEY`（见下文）。
+
+### 1. 本地演示模式（手动）
 
 > 核心闭环（简历上传 → AI 分析 → 模拟面试 → 总结 → PDF 报告）**不依赖 PostgreSQL/pgvector**。
 > 仅知识库 RAG 需要向量库，本地模式自动优雅降级。
@@ -87,7 +100,7 @@ SPRING_PROFILES_ACTIVE=local ./gradlew bootRun --args="--server.port=8080"
 
 本地模式使用 H2（PostgreSQL 兼容模式，数据落在 `data/` 目录）+ 本机 Redis，Flyway 关闭。切换到完整模式只需去掉 `local` profile 并先启动 Docker 基础设施。
 
-### 1. 完整模式：启动基础设施（Docker）
+### 2. 完整模式：启动基础设施（Docker）
 
 ```bash
 docker compose up -d
@@ -95,7 +108,7 @@ docker compose up -d
 # Redis:               localhost:6379
 ```
 
-### 2. 配置模型密钥（环境变量）
+### 3. 配置模型密钥（环境变量）
 
 > 💡 本项目已在本机通过 `setx` 写入系统用户环境变量（`AI_API_KEY` / `AI_CHAT_MODEL` / `AI_BASE_URL` / `EMBEDDING_API_KEY` / `EMBEDDING_BASE_URL` / `EMBEDDING_MODEL`），**新开终端即可直接启动**。以下为换环境 / 换钥匙时的说明：
 
