@@ -9,6 +9,7 @@ import com.baishan.interview.domain.Resume;
 import com.baishan.interview.domain.SessionStatus;
 import com.baishan.interview.dto.CreateSessionRequest;
 import com.baishan.interview.dto.EvaluationResult;
+import com.baishan.interview.dto.InterviewPlan;
 import com.baishan.interview.dto.InterviewSummary;
 import com.baishan.interview.dto.MessageView;
 import com.baishan.interview.dto.ResumeAnalysis;
@@ -83,11 +84,19 @@ public class InterviewService {
         InterviewSession session = new InterviewSession(
                 UUID.randomUUID(), request.resumeId(), mode, request.jdText(), SessionStatus.ACTIVE.name());
         session.setCreatedAt(OffsetDateTime.now());
-        Map<String, Object> context = Map.of(
-                "resumeAnalysis", analysis.toView(),
-                "jd", request.jdText() == null ? "" : request.jdText(),
-                "kbContext", kbContext
-        );
+
+        // 生成题目计划：基于简历分析 + JD + 模式 + 题数，规划覆盖各模块的出题骨架。
+        // 失败则降级为自由出题，不影响会话创建。
+        InterviewPlan plan = generatePlan(analysis, request.jdText(), mode,
+                appProperties.getInterview().getQuestionCount());
+
+        Map<String, Object> context = new java.util.LinkedHashMap<>();
+        context.put("resumeAnalysis", analysis.toView());
+        context.put("jd", request.jdText() == null ? "" : request.jdText());
+        context.put("kbContext", kbContext);
+        if (plan != null) {
+            context.put("questionPlan", jsonService.toJson(plan));
+        }
         session.setContextJson(jsonService.toJson(context));
         sessionRepository.save(session);
 
@@ -325,12 +334,76 @@ public class InterviewService {
                 1. 一次只提出 1 个问题；问题要具体、有针对性，紧扣候选人简历中的真实经历与目标岗位要求，避免空泛。
                 2. 问题长度控制在 60-150 字，口语化，像真人面试官。
                 3. 严格基于简历信息提问，不得虚构简历中没有的经历；涉及简历未覆盖的领域时以岗位要求为锚点提问。
-                4. 根据上一题的回答质量动态调整：回答扎实则适度加深追问，回答含糊则引导补充细节。
+                4. 根据上一题回答质量在本**题主题内**动态调整深度：回答扎实可在本题计划角度内适度加深，回答含糊则引导补充细节；但整场必须按题目计划在简历各模块与岗位能力间覆盖，避免连续多题停留在同一主题。
                 5. 全程使用简体中文。
+                6. 出题必须紧扣题目计划中给出的锚点（具体项目 / 技术 / 岗位要求），杜绝"请介绍一下你的项目"之类泛泛提问；若未提供题目计划，则主动覆盖简历中不同项目与岗位能力。
                 """.formatted(modeLabel(session.getMode()), resumeBrief, jd, kb);
     }
 
-    private String buildAskPrompt(InterviewSession session, int nextIndex) {
+    // ---------------------------------------------------------------- 题目计划生成
+
+    /**
+     * 基于简历分析、岗位 JD、面试模式与题数，生成结构化的题目计划。
+     * 作为整场面试的出题骨架，保证覆盖简历各模块与岗位能力、避免单点深挖。
+     * 生成失败（API 异常）时返回 null，调用方降级为自由出题。
+     */
+    private InterviewPlan generatePlan(ResumeAnalysis analysis, String jd, String mode, int count) {
+        try {
+            return chatClient.prompt()
+                    .system(PLAN_SYSTEM_PROMPT)
+                    .user(buildPlanUserPrompt(analysis, jd, mode, count))
+                    .call()
+                    .entity(InterviewPlan.class);
+        } catch (Exception e) {
+            log.warn("生成面试题目计划失败，回退为自由出题模式", e);
+            return null;
+        }
+    }
+
+    private String buildPlanUserPrompt(ResumeAnalysis analysis, String jd, String mode, int count) {
+        return """
+                候选人简历分析：
+                %s
+
+                目标岗位（JD）：
+                %s
+
+                面试模式：%s（TECHNICAL=技术面，BEHAVIORAL=行为面，MIXED=综合面）
+                本题面试总题数：%d
+
+                请基于以上信息，规划一份包含 %d 个题目的「面试题目计划」。
+                要求：
+                1. 覆盖简历中每一个项目 / 核心经历至少一次；同时覆盖 JD 要求的 1-2 项关键技术能力；MIXED 模式需至少包含 1 道行为题。
+                2. 每个题目的 ground 必须引用简历或 JD 中的具体信息（具体项目名、技术栈、能力要求），杜绝"请介绍一下你的项目"这类泛泛提问。
+                3. 题目之间主题应有明显区分，避免连续多题停留在同一项目。
+                4. 输出严格对应 InterviewPlan / InterviewPlanItem 结构（topic、angle、ground、type）。
+                """.formatted(jsonService.toJson(analysis.toView()),
+                jd == null || jd.isBlank() ? "（未提供 JD）" : jd,
+                modeLabel(mode), count, count);
+    }
+
+    /** 从会话上下文中解析题目计划（以 JSON 字符串存储）。 */
+    private InterviewPlan parsePlan(InterviewSession session) {
+        if (session.getContextJson() == null) {
+            return null;
+        }
+        var ctx = jsonService.fromJson(session.getContextJson(), java.util.Map.class);
+        if (ctx == null || ctx.get("questionPlan") == null) {
+            return null;
+        }
+        Object raw = ctx.get("questionPlan");
+        String json = raw instanceof String s ? s : jsonService.toJson(raw);
+        return jsonService.fromJson(json, InterviewPlan.class);
+    }
+
+    // ---------------------------------------------------------------- 出题提示词（计划驱动）
+
+    /**
+     * 构造第 nextIndex 题的出题提示词。
+     * 以题目计划（InterviewPlan）为唯一主题来源：本题必须围绕计划中该序号指定的
+     * 主题 / 角度 / 简历·岗位锚点，避免单点深挖与泛泛而问；同时强制"覆盖分散"。
+     */
+    String buildAskPrompt(InterviewSession session, int nextIndex) {
         List<InterviewMessage> qa = messageRepository.findBySessionIdOrderByIdAsc(session.getId());
         StringBuilder askedList = new StringBuilder();
         List<String> questions = qa.stream()
@@ -342,7 +415,7 @@ public class InterviewService {
         }
 
         StringBuilder feedback = new StringBuilder();
-        // 上题回答与评估
+        // 上题回答与评估（仅作为当前计划主题内的深度参考，不改变本题主题）
         List<InterviewMessage> answers = qa.stream()
                 .filter(m -> MessageKind.ANSWER.name().equals(m.getKind()))
                 .toList();
@@ -357,9 +430,26 @@ public class InterviewService {
                 if (e != null) {
                     feedback.append("上题评分：").append(e.score()).append("/10\n")
                             .append("上题点评：").append(e.feedback()).append('\n')
-                            .append("后续出题方向建议：").append(e.nextFocus() == null ? "无" : e.nextFocus()).append('\n');
+                            .append("（深度参考，仅供调整当前主题内的追问深度，不改变本题主题）后续出题方向建议：")
+                            .append(e.nextFocus() == null ? "无" : e.nextFocus()).append('\n');
                 }
             }
+        }
+
+        // 题目计划：本题必须围绕计划中的指定主题 / 角度 / 锚点
+        StringBuilder planBlock = new StringBuilder();
+        InterviewPlan plan = parsePlan(session);
+        InterviewPlan.InterviewPlanItem planned = null;
+        if (plan != null && plan.items() != null && nextIndex >= 1 && nextIndex <= plan.items().size()) {
+            planned = plan.items().get(nextIndex - 1);
+        }
+        if (planned != null) {
+            planBlock.append("【本题计划主题（必须围绕此主题出题，不得偏离）】\n")
+                    .append("主题：").append(planned.topic()).append('\n')
+                    .append("角度：").append(planned.angle()).append('\n')
+                    .append("必须紧扣的简历 / 岗位锚点（禁止泛泛而谈）：").append(planned.ground()).append('\n');
+        } else {
+            planBlock.append("（无题目计划，请基于简历与岗位自行规划，并确保覆盖不同模块、紧扣具体经历）\n");
         }
 
         int total = appProperties.getInterview().getQuestionCount();
@@ -369,12 +459,20 @@ public class InterviewService {
                 %s
                 %s
 
+                【计划主题约束】
+                %s
+
                 【已问过的问题（不得重复）】
                 %s
 
+                【出题覆盖要求】
+                - 本题主题须与前面已问主题明显不同，优先考察尚未充分覆盖的简历模块 / 项目 / 岗位能力。
+                - 除非本题计划角度本身即为连续深度追问，否则不要在同一项目上连续追问超过 1 题。
+                - 上一题的"后续出题方向建议"仅供在当前计划主题内调整深度参考，不改变本题主题。
+
                 请只输出问题本身，不要输出其他内容。
-                """.formatted(nextIndex, total, feedback.isEmpty() ? "" : feedback, 
-                modeRule(session.getMode()), askedList.length() == 0 ? "（暂无）" : askedList);
+                """.formatted(nextIndex, total, feedback.isEmpty() ? "" : feedback,
+                modeRule(session.getMode()), planBlock, askedList.length() == 0 ? "（暂无）" : askedList);
     }
 
     private String buildEvaluationUserPrompt(InterviewSession session, String question, String answer) {
@@ -442,6 +540,21 @@ public class InterviewService {
         return s.length() <= max ? s : s.substring(0, max) + "……";
     }
 
+    private static final String PLAN_SYSTEM_PROMPT = """
+            你是一位资深技术面试官，擅长根据候选人简历与目标岗位设计结构化的面试题目计划。
+
+            【题目计划要求】
+            - 共需产出与"总题数"相等数量的题目意图（InterviewPlanItem）。
+            - topic：题目主题，例如「项目：白山面试辅助 Agent」「技能：Redis 缓存与高并发」「行为：团队协作与冲突处理」。
+            - angle：出题角度，例如「整体架构与 Spring AI 工具调用设计」「缓存击穿与分布式锁的落地」。
+            - ground：本题必须紧扣的简历 / 岗位锚点（具体项目名、技术栈、JD 能力要求），用于约束面试官不得泛泛而谈。
+            - type：PROJECT（项目经历）/ SKILL（技术能力）/ BEHAVIORAL（行为软技能）/ JD_GAP（JD 要求但简历偏弱、需探查的能力）。
+            - 必须覆盖简历中每个项目至少一次；MIXED 模式至少 1 道 BEHAVIORAL；技术能力题需对应岗位要求。
+            - 题目应层层递进但主题分散，避免连续追问同一项目。
+
+            请只输出符合结构的内容。
+            """;
+
     private static final String EVALUATION_SYSTEM_PROMPT = """
             你是一位严格的招聘面试官，正在评估候选人对面试问题的回答质量。
 
@@ -451,7 +564,7 @@ public class InterviewService {
             - feedback：80-150 字总体点评，具体指出亮点与不足。
             - strengths：回答中的亮点，2-3 条。
             - improvements：回答中可改进之处，2-3 条，给出可操作的改进方向。
-            - nextFocus：给面试官的下一条出题方向建议（例如"追问项目中的技术难点"、"考察候选人抗压能力"），一句话。
+            - nextFocus：对**当前题目主题**给出深度追问建议（例如"让候选人补充缓存击穿的具体解决方案"），一句话；注意：它只用于调整本题主题内的深度，不决定下一题的主题（下一题主题由面试计划保证覆盖不同模块）。
             请客观评分，回答质量差就给低分，不要无原则宽容。
             """;
 
