@@ -1,0 +1,10 @@
+# 统一行尾：源码与文档统一 LF，Windows 脚本 CRLF，二进制原样
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.vbs text eol=crlf
+*.bat text eol=crlf
+*.png binary
+*.ico binary
