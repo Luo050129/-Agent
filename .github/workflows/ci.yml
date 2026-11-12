@@ -20,11 +20,11 @@ jobs:
           pass=0; fail=0
           for f in tests/test_*.py; do
             if [ "$(basename "$f")" = "test_gui.py" ]; then continue; fi
-            r=$(python "$f" 2>&1 | tail -1)
-            echo "$f: $r"
+            r=$(python "$f" 2>&1 | tail -5)
+            echo "$f: $(echo "$r" | tail -1)"
             case "$r" in
               *"全部通过"*) pass=$((pass+1));;
-              *) fail=$((fail+1)); echo "::error::FAIL $f";;
+              *) fail=$((fail+1)); echo "::error::[$f] $r";;
             esac
           done
           echo "suites passed: $pass, failed: $fail"
