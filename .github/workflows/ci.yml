@@ -1,0 +1,34 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # 全部测试都是零依赖标准库实现，不需要 pip install
+      # GUI 冒烟测试需要真实显示器，CI 上跳过（本地跑 tests/test_gui.py）
+      - name: Run test suites (non-GUI)
+        run: |
+          pass=0; fail=0
+          for f in tests/test_*.py; do
+            if [ "$(basename "$f")" = "test_gui.py" ]; then continue; fi
+            r=$(python "$f" 2>&1 | tail -1)
+            echo "$f: $r"
+            case "$r" in
+              *"全部通过"*) pass=$((pass+1));;
+              *) fail=$((fail+1)); echo "::error::FAIL $f";;
+            esac
+          done
+          echo "suites passed: $pass, failed: $fail"
+          [ "$fail" -eq 0 ]
+
+      - name: Selftest (no API key needed)
+        run: python agent.py --selftest
