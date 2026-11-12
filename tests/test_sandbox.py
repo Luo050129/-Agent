@@ -79,10 +79,17 @@ def test_process_and_net_guard() -> list[tuple[str, bool]]:
     ]
 
 
+def _sleep_cmd(seconds: int) -> str:
+    """跨平台的「睡 N 秒」shell 命令：Windows 用 ping 停顿，其他用 sleep。"""
+    if sys.platform == "win32":
+        return f"ping -n {seconds + 1} 127.0.0.1"
+    return f"sleep {seconds}"
+
+
 def test_timeout_kills_tree() -> list[tuple[str, bool]]:
     _enable_default_roots()
     start = time.monotonic()
-    result = runtime.run_shell("ping -n 30 127.0.0.1", timeout=2)
+    result = runtime.run_shell(_sleep_cmd(30), timeout=2)
     elapsed = time.monotonic() - start
     return [
         ("超时返回错误", "[ERR]" in result and "超时" in result),
