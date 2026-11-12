@@ -1,5 +1,8 @@
 name: Tests
 
+permissions:
+  contents: write
+
 on:
   push:
   pull_request:
@@ -18,17 +21,33 @@ jobs:
       - name: Run test suites (non-GUI)
         run: |
           pass=0; fail=0
+          mkdir -p _ci
           for f in tests/test_*.py; do
-            if [ "$(basename "$f")" = "test_gui.py" ]; then continue; fi
-            r=$(python "$f" 2>&1 | tail -5)
-            echo "$f: $(echo "$r" | tail -1)"
+            name=$(basename "$f" .py)
+            if [ "$name" = "test_gui" ]; then continue; fi
+            python "$f" > "_ci/$name.log" 2>&1
+            r=$(tail -1 "_ci/$name.log")
+            echo "$name: $r"
             case "$r" in
               *"全部通过"*) pass=$((pass+1));;
-              *) fail=$((fail+1)); echo "::error::[$f] $r";;
+              *) fail=$((fail+1)); echo "::error::FAIL $name";;
             esac
           done
+          python agent.py --selftest > "_ci/_selftest.log" 2>&1 || fail=$((fail+1))
           echo "suites passed: $pass, failed: $fail"
           [ "$fail" -eq 0 ]
 
-      - name: Selftest (no API key needed)
-        run: python agent.py --selftest
+      # 失败时把完整日志推到 ci-logs 分支，方便离线定位（成功时跳过）
+      - name: Dump logs to ci-logs branch
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git checkout -B ci-logs 2>/dev/null || true
+          git rm -rf --cached . -q 2>/dev/null || true
+          git add -f _ci
+          git commit -m "ci failure logs (${GITHUB_SHA::7})" -q || exit 0
+          git push -f origin ci-logs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
