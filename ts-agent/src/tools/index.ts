@@ -11,6 +11,7 @@ import { mcpManager } from "../mcp/manager.ts";
 import { ERR } from "../markers.ts";
 import * as filesystem from "./filesystem.ts";
 import * as runtime from "./runtime.ts";
+import * as documents from "./documents.ts";
 import * as skills from "./skills.ts";
 import { tagResult } from "./util.ts";
 
@@ -22,7 +23,7 @@ export interface ToolModule {
   dangerous: string[];
 }
 
-const MODULES: ToolModule[] = [runtime, filesystem, skills];
+const MODULES: ToolModule[] = [runtime, filesystem, documents, skills];
 
 export const BUILTIN_SCHEMAS: Array<Record<string, unknown>> = MODULES.flatMap((m) => m.schemas);
 export const DANGEROUS = new Set(MODULES.flatMap((m) => m.dangerous));

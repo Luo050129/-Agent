@@ -6,7 +6,7 @@ Python 版的同架构重写。保留了「零运行时依赖」这个底线：*
 ```bash
 node --version          # 需要 >= 22.6
 npm run selftest        # 无 Key 自检整条链路
-npm test                # 105 项测试（11 个套件）
+npm test                # 113 项测试（12 个套件）
 
 # 用起来（先配 Key：环境变量或 ts-agent/.env）
 node --experimental-strip-types src/cli/main.ts "统计这个目录有多少文件"
@@ -37,6 +37,7 @@ node --experimental-strip-types src/cli/main.ts            # 交互模式（/und
 | `protocols/openai_chat.py` | `src/model/protocols/openai.ts` | ✅ 完成 |
 | `model/client.py` | `src/model/client.ts` | ✅ 完成（重试/超时/已吐字不重试） |
 | `tools/{index,filesystem,runtime}.py` | `src/tools/*.ts` | ✅ 完成（`run_python` → `run_node`） |
+| `tools/documents.py` | `src/tools/documents.ts` | ✅ 完成（docx/xlsx/pdf 手写解析，格式见下） |
 | `core/session.py` | `src/core/session.ts` | ✅ 完成（单口入库 + 观察者） |
 | `core/guard.py` | `src/core/guard.ts` | ✅ 完成（六类熔断） |
 | `core/context.py` | `src/core/context.ts` | ✅ 完成（预算折叠 + 工具结果压缩 + 孤儿修复） |
@@ -50,7 +51,7 @@ node --experimental-strip-types src/cli/main.ts            # 交互模式（/und
 | `mcp/*` | `src/mcp/{client,manager}.ts` | ✅ 完成（零依赖手写 JSON-RPC + 工具清单压缩） |
 | `plugins/*` `skills/*` | `src/plugins.ts` · `src/skills.ts` · `src/zip.ts` | ✅ 完成（GitHub 安装，zip 自己解） |
 | `ui/*` tkinter 界面 | `src/cli/{sink,tui}.ts` | ✅ 完成（富终端：实时状态行 + 计划进度） |
-| 24 个测试套件 | 11 个套件 105 项 | ✅ 核心逻辑全覆盖 |
+| 24 个测试套件 | 12 个套件 113 项 | ✅ 覆盖全部核心能力 |
 
 ## 语言差异带来的设计调整
 
@@ -85,4 +86,8 @@ tests/plan.test.ts         计划 JSON 抠取、步骤上限、重规划、总�
 tests/completion.test.ts   快判打分、验证四种结果（10 项）
 tests/persistence.test.ts  落盘、恢复、崩溃修复、列表与 resume（7 项）
 tests/checkpoints.test.ts  撤销语义、链式回退、环形上限、二进制（7 项）
+tests/sandbox.test.ts      白名单、进程/网络拦截、静态预检、堆上限、杀树（13 项）
+tests/mcp.test.ts          握手、工具发现、调用、压缩、错误隔离（8 项）
+tests/skills.test.ts       zip 读取、技能发现与安装、插件加载（9 项）
+tests/documents.test.ts    docx/xlsx/pdf/文本/图片 解析（8 项）
 ```
