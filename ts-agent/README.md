@@ -6,13 +6,14 @@ Python 版的同架构重写。保留了「零运行时依赖」这个底线：*
 ```bash
 node --version          # 需要 >= 22.6
 npm run selftest        # 无 Key 自检整条链路
-npm test                # 113 项测试（12 个套件）
+npm test                # 127 项测试（14 个套件）
 
 # 用起来（先配 Key：环境变量或 ts-agent/.env）
 node --experimental-strip-types src/cli/main.ts "统计这个目录有多少文件"
 node --experimental-strip-types src/cli/main.ts --mode plan "把项目文档整理一遍"
 node --experimental-strip-types src/cli/main.ts --resume   # 接着上次的会话
-node --experimental-strip-types src/cli/main.ts            # 交互模式（/undo /clear）
+node --experimental-strip-types src/cli/main.ts --safe     # 安全模式：写文件/跑命令前确认
+node --experimental-strip-types src/cli/main.ts            # 交互模式
 ```
 
 ## 为什么不用 npm 依赖
@@ -42,6 +43,8 @@ node --experimental-strip-types src/cli/main.ts            # 交互模式（/und
 | `core/guard.py` | `src/core/guard.ts` | ✅ 完成（六类熔断） |
 | `core/context.py` | `src/core/context.ts` | ✅ 完成（预算折叠 + 工具结果压缩 + 孤儿修复） |
 | `core/prompt.py` | `src/core/prompt.ts` | ✅ 完成 |
+| `core/search.py` | `src/core/search.ts` | ✅ 完成（跨会话检索 + 当前会话内搜索） |
+| `--safe` 危险操作确认 | `core/loop.ts` + `cli/sink.ts` 的 `confirm` | ✅ 完成（无 confirm 实现按拒绝处理） |
 | `core/loop.py`（ReAct） | `src/core/loop.ts` | ✅ 完成 |
 | `core/loop.py`（Plan 模式） | `src/core/plan.ts` + loop 内 runPlan | ✅ 完成（含卡住重规划一次） |
 | `core/completion.py` 验证式自检 | `src/core/completion.ts` | ✅ 完成（工具反证 + NOVERIFY 放行） |
@@ -51,7 +54,7 @@ node --experimental-strip-types src/cli/main.ts            # 交互模式（/und
 | `mcp/*` | `src/mcp/{client,manager}.ts` | ✅ 完成（零依赖手写 JSON-RPC + 工具清单压缩） |
 | `plugins/*` `skills/*` | `src/plugins.ts` · `src/skills.ts` · `src/zip.ts` | ✅ 完成（GitHub 安装，zip 自己解） |
 | `ui/*` tkinter 界面 | `src/cli/{sink,tui}.ts` | ✅ 完成（富终端：实时状态行 + 计划进度） |
-| 24 个测试套件 | 12 个套件 113 项 | ✅ 覆盖全部核心能力 |
+| 24 个测试套件 | 14 个套件 127 项 | ✅ 覆盖全部核心能力 |
 
 ## 语言差异带来的设计调整
 
@@ -90,4 +93,6 @@ tests/sandbox.test.ts      白名单、进程/网络拦截、静态预检、堆�
 tests/mcp.test.ts          握手、工具发现、调用、压缩、错误隔离（8 项）
 tests/skills.test.ts       zip 读取、技能发现与安装、插件加载（9 项）
 tests/documents.test.ts    docx/xlsx/pdf/文本/图片 解析（8 项）
+tests/search.test.ts       跨会话检索、打分排序、角色过滤（9 项）
+tests/safe.test.ts         危险操作确认、拒绝回灌、只读不打扰（5 项）
 ```

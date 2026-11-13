@@ -4,6 +4,7 @@
  * 内核只认 Sink 的九个方法，换界面（TUI / Web / JSON 管道）只换这一层。
  */
 
+import { createInterface, type Interface } from "node:readline/promises";
 import type { PlanStep } from "../core/plan.ts";
 import type { Sink, TaskState } from "../core/loop.ts";
 
@@ -18,9 +19,57 @@ const c = {
 
 export const color = c;
 
+/**
+ * 危险操作确认。有现成的 readline 就复用它（交互模式）；
+ * 没有就临时开一个；非 TTY 直接拒绝 —— 管道里没人能回答。
+ */
+export async function confirmDanger(
+  tool: string,
+  args: string,
+  rl?: Interface | null,
+): Promise<boolean> {
+  const detail = args.length > 240 ? `${args.slice(0, 240)}…` : args;
+
+  if (!process.stdin.isTTY) {
+    process.stdout.write(
+      `
+${c.yellow(`[安全模式] 非交互环境，已拒绝 ${tool}`)}（脚本里请加 --yes 明确放行）
+`,
+    );
+    return false;
+  }
+
+  const own = rl ?? createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (
+      await own.question(
+        `
+${c.yellow("⚠ 危险操作")} ${c.cyan(tool)}
+  ${c.dim(detail)}
+  执行吗？[y/N] `,
+      )
+    )
+      .trim()
+      .toLowerCase();
+    return answer === "y" || answer === "yes";
+  } finally {
+    if (!rl) own.close();
+  }
+}
+
 export class ConsoleSink implements Sink {
   lastState: TaskState | null = null;
   private streamed = false;
+  private prompt: Interface | null = null;
+
+  /** 交互模式把主 readline 交进来，确认时复用同一个 stdin */
+  attachPrompt(rl: Interface | null): void {
+    this.prompt = rl;
+  }
+
+  async confirm(tool: string, args: string): Promise<boolean> {
+    return confirmDanger(tool, args, this.prompt);
+  }
 
   text(piece: string): void {
     this.streamed = true;

@@ -14,6 +14,7 @@ import { createInterface } from "node:readline/promises";
 import { ConfigError, loadEnv } from "../config.ts";
 import { normalizeMode } from "../core/plan.ts";
 import { SessionStore } from "../core/persistence.ts";
+import { searchSessions } from "../core/search.ts";
 import { Agent, type Streamable } from "../core/loop.ts";
 import { Session } from "../core/session.ts";
 import { systemPrompt } from "../core/prompt.ts";
@@ -36,12 +37,14 @@ interface Args {
   resume?: string;
   persist: boolean;
   tui: boolean;
+  safe: boolean;
+  yes: boolean;
   selftest: boolean;
   help: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { maxSteps: 20, mode: "react", persist: true, tui: false, selftest: false, help: false };
+  const args: Args = { maxSteps: 20, mode: "react", persist: true, tui: false, safe: false, yes: false, selftest: false, help: false };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i] as string;
     const next = (): string => {
@@ -79,6 +82,12 @@ function parseArgs(argv: string[]): Args {
         break;
       case "--tui":
         args.tui = true;
+        break;
+      case "--safe":
+        args.safe = true;
+        break;
+      case "--yes":
+        args.yes = true;
         break;
       case "--selftest":
         args.selftest = true;
@@ -157,9 +166,11 @@ function printHelp(): void {
       "      --resume [id]     恢复历史会话，省略 id 就是最近一次",
       "      --no-persist      本次对话不落盘",
       "      --tui             富终端界面（实时状态行 + 计划进度）",
+      "      --safe            安全模式：写文件/跑命令前先确认",
+      "      --yes             跳过安全确认（脚本/自动化用）",
       "      --selftest        无 Key 自检整条链路",
       "",
-      "交互命令：/undo 撤销最近一次写入 · /clear 开新会话 · /exit 退出",
+      "交互命令：/undo 撤销写入 · /find 关键词 搜历史 · /sessions 列存档 · /clear 新会话 · /exit 退出",
     ].join("\n"),
   );
 }
@@ -221,7 +232,9 @@ async function main(): Promise<number> {
 
   let { session, store } = openSession(args);
   const sink = args.tui ? new TuiSink(llm.label, mode) : new ConsoleSink();
-  const agent = new Agent(llm, { maxSteps: args.maxSteps, mode });
+  // --yes 明确表示「我信任它」，覆盖 --safe
+  const safe = args.safe && !args.yes;
+  const agent = new Agent(llm, { maxSteps: args.maxSteps, mode, safe });
 
   if (args.prompt) {
     session.addUser(args.prompt);
@@ -232,9 +245,14 @@ async function main(): Promise<number> {
 
   const archive = store ? color.dim(` · 存档 ${store.sessionId}`) : "";
   console.log(`${color.cyan("墟")}  模型 ${llm.label} · 模式 ${mode}${archive}`);
-  console.log(color.dim("（exit 退出，/undo 撤销写入，/clear 新会话）"));
+  console.log(
+    color.dim(
+      `（exit 退出${safe ? " · 安全模式已开" : ""} · /undo 撤销 · /find 搜历史 · /sessions 存档 · /clear 新会话）`,
+    ),
+  );
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
+  sink.attachPrompt(rl);
   try {
     for (;;) {
       let input = "";
@@ -251,6 +269,32 @@ async function main(): Promise<number> {
       }
       if (input === "/undo") {
         console.log(color.dim(undoLast()));
+        continue;
+      }
+      if (input.startsWith("/find ")) {
+        const keyword = input.slice(6).trim();
+        const hits = keyword ? searchSessions(keyword, { limit: 12 }) : [];
+        if (hits.length === 0) {
+          console.log(color.dim("没有命中。换个关键词，或先多聊几轮攒点历史。"));
+        } else {
+          hits.forEach((hit) => {
+            const role = hit.role === "user" ? "你" : hit.role === "assistant" ? "助手" : hit.role;
+            console.log(`${color.cyan(hit.sessionId)} ${color.dim(`[${role}]`)} ${hit.snippet}`);
+          });
+          console.log(color.dim(`共 ${hits.length} 条 · 用 --resume <会话号> 打开`));
+        }
+        continue;
+      }
+      if (input === "/sessions") {
+        const items = SessionStore.list();
+        if (items.length === 0) {
+          console.log(color.dim("还没有存档。"));
+        } else {
+          items.slice(0, 10).forEach((item) => {
+            const when = new Date(item.updated).toLocaleString("zh-CN", { hour12: false });
+            console.log(`${color.cyan(item.id)} ${color.dim(when)} ${item.title} ${color.dim(`(${item.turns} 轮)`)}`);
+          });
+        }
         continue;
       }
       if (input === "/clear") {

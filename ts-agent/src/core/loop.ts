@@ -59,6 +59,8 @@ export interface Sink {
   notice?(message: string): void;
   plan?(steps: PlanStep[]): void;
   planStep?(index: number, status: "running" | "done" | "failed", note?: string): void;
+  /** 安全模式下的确认；没有实现就视为拒绝（自动化场景更安全） */
+  confirm?(tool: string, args: string): Promise<boolean>;
 }
 
 /** 什么都不做的 Sink：测试和嵌入时用 */
@@ -78,6 +80,8 @@ export interface AgentOptions {
   judge?: CompletionJudge;
   /** 出口验证开关（默认开；纯问答会自己走 NOVERIFY 放行） */
   verify?: boolean;
+  /** 安全模式：危险工具执行前先问一句 */
+  safe?: boolean;
 }
 
 /** react 循环的一次执行结果 */
@@ -95,6 +99,7 @@ export class Agent {
   private readonly context: ContextManager;
   private readonly judge: CompletionJudge;
   private readonly verifyEnabled: boolean;
+  private readonly safe: boolean;
 
   constructor(llm: Streamable, opts: AgentOptions = {}) {
     this.llm = llm;
@@ -104,6 +109,7 @@ export class Agent {
     this.context = opts.context ?? new ContextManager();
     this.judge = opts.judge ?? new CompletionJudge();
     this.verifyEnabled = opts.verify ?? true;
+    this.safe = opts.safe ?? false;
   }
 
   async run(session: Session, sink: Sink = NULL_SINK): Promise<string> {
@@ -183,6 +189,10 @@ export class Agent {
               const blocked = this.guard.beforeTool(call.function.name, args);
               if (blocked) {
                 failure = blocked;
+                break;
+              }
+              if (!(await this.allowTool(call.function.name, args, sink))) {
+                failure = "用户拒绝了验证操作";
                 break;
               }
               sink.toolCall(call.function.name, args);
@@ -276,6 +286,14 @@ export class Agent {
             note: blocked,
           });
           return { text: report, blocked, verified: false };
+        }
+
+        if (!(await this.allowTool(name, rawArgs, sink))) {
+          const denied = "[ERR] 用户拒绝了这次操作（安全模式）。换一个不动系统的做法，或说明为什么必须执行。";
+          sink.toolResult(denied);
+          session.addTool(call.id, denied);
+          this.guard.afterTool(name, rawArgs, denied, true);
+          continue;
         }
 
         sink.toolCall(name, rawArgs);
@@ -404,6 +422,17 @@ export class Agent {
       return parsePlan(text);
     } catch {
       return [];
+    }
+  }
+
+  /** 危险工具是否需要用户点头；没实现 confirm 的界面按拒绝处理 */
+  private async allowTool(name: string, args: string, sink: Sink): Promise<boolean> {
+    if (!this.safe || !DANGEROUS.has(name)) return true;
+    if (!sink.confirm) return false;
+    try {
+      return await sink.confirm(name, args);
+    } catch {
+      return false;
     }
   }
 

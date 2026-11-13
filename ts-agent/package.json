@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node --experimental-strip-types src/cli/main.ts",
-    "test": "node --experimental-strip-types --test \"tests/*.test.ts\"",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 \"tests/*.test.ts\"",
     "selftest": "node --experimental-strip-types src/cli/main.ts --selftest"
   },
   "license": "MIT"

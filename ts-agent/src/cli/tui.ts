@@ -8,13 +8,14 @@
 
 import type { Sink, TaskState } from "../core/loop.ts";
 import type { PlanStep } from "../core/plan.ts";
-import { color } from "./sink.ts";
+import { color, confirmDanger } from "./sink.ts";
 
 const useColor = process.stdout.isTTY === true;
 const ESC = "\x1b[";
 
 export class TuiSink implements Sink {
   lastState: TaskState | null = null;
+  private prompt: { question(q: string): Promise<string>; close(): void } | null = null;
   private modelLabel = "";
   private mode = "react";
   private steps: PlanStep[] = [];
@@ -24,6 +25,15 @@ export class TuiSink implements Sink {
   constructor(modelLabel: string, mode: string) {
     this.modelLabel = modelLabel;
     this.mode = mode;
+  }
+
+  attachPrompt(rl: { question(q: string): Promise<string>; close(): void } | null): void {
+    this.prompt = rl;
+  }
+
+  async confirm(tool: string, args: string): Promise<boolean> {
+    this.breakLine();
+    return confirmDanger(tool, args, this.prompt as never);
   }
 
   /** 状态行：先清当前行再写，避免拉出长龙 */
