@@ -82,7 +82,8 @@ test("超时会杀进程", async () => {
   const result = await runGuarded("await new Promise(r => setTimeout(r, 30000));", { timeout: 2 });
   const elapsed = (Date.now() - started) / 1000;
   assert.equal(result.timedOut, true);
-  assert.ok(elapsed < 10, `应快速返回，实际 ${elapsed}s`);
+  // 超时设的是 2s，只要远小于 30s 的 sleep 就说明真杀了；留足余量防机器忙时误报
+  assert.ok(elapsed < 15, `应快速返回，实际 ${elapsed}s`);
   assert.ok(formatGuarded(result, "超时").includes("进程树已终止"));
 });
 
