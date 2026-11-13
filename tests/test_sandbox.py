@@ -32,15 +32,25 @@ def _enable_default_roots() -> None:
 
 
 def test_normal_execution() -> list[tuple[str, bool]]:
-    """沙箱开着，正常用法必须全部照旧。"""
+    """沙箱开着，正常用法必须全部照旧。
+
+    读写探针自己造：不拿 README 当靶子——文档改个格式就能把断言打翻。
+    """
     _enable_default_roots()
+    probe = BASE_DIR / ".agent" / "_sb_read.txt"
+    probe.parent.mkdir(parents=True, exist_ok=True)
+    probe.write_text("沙箱读写探针", encoding="utf-8")
+
+    read_out = runtime.run_python("print(open('.agent/_sb_read.txt', encoding='utf-8').read())")
+    pathlib_out = runtime.run_python(
+        "from pathlib import Path; print(Path('.agent/_sb_read.txt').read_text(encoding='utf-8'))"
+    )
     checks = [
         ("能算数", "2" in runtime.run_python("print(1 + 1)")),
-        ("能读工作区文件", "墟" in runtime.run_python("print(open('README.md', encoding='utf-8').readline())")),
+        ("能读工作区文件", "沙箱读写探针" in read_out),
         ("能写工作区文件", "written" in runtime.run_python(
             "open('.agent/_sb_probe.txt', 'w').write('ok'); print('written')")),
-        ("pathlib 正常", "墟" in runtime.run_python(
-            "from pathlib import Path; print(Path('README.md').read_text(encoding='utf-8')[:20])")),
+        ("pathlib 正常", "沙箱读写探针" in pathlib_out),
         ("stdlib 可用", '{"a": 1}' in runtime.run_python("import json; print(json.dumps({'a': 1}))")),
         ("tempfile 可用", "ok" in runtime.run_python(
             "import tempfile, os; p = os.path.join(tempfile.gettempdir(), '_sb_t.txt');"
@@ -50,6 +60,7 @@ def test_normal_execution() -> list[tuple[str, bool]]:
         ("守卫源码能编译", compile(sandbox.wrap_python_source("pass"), "<g>", "exec") is not None),
     ]
     Path(BASE_DIR / ".agent" / "_sb_probe.txt").unlink(missing_ok=True)
+    probe.unlink(missing_ok=True)
     return checks
 
 

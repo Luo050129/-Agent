@@ -18,6 +18,25 @@ jobs:
 
       # 全部测试都是零依赖标准库实现，不需要 pip install
       # GUI 冒烟测试需要真实显示器，CI 上跳过（本地跑 tests/test_gui.py）
+      # 密钥防线：项目默认不带任何密钥，用户自己配 .env（该文件已被 .gitignore）
+      - name: Secret scan
+        run: |
+          set +e
+          hits=$(grep -rnE "sk-[A-Za-z0-9]{20,}" \
+            --include="*.py" --include="*.json" --include="*.md" \
+            --include="*.yml" --include="*.vbs" --include="*.example" . \
+            | grep -v "^\./\.git/")
+          if [ -n "$hits" ]; then
+            echo "::error::源码里出现疑似真实密钥"
+            echo "$hits"
+            exit 1
+          fi
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo "::error::.env 被提交进版本库了"
+            exit 1
+          fi
+          echo "secret scan: 干净"
+
       - name: Run test suites (non-GUI)
         run: |
           set +e  # Actions 的 bash 默认 -e 会套件一失败就终止，这里要收集全部失败
