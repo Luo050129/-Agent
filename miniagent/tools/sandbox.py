@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -137,7 +138,13 @@ def _assign(job: int, proc: subprocess.Popen) -> None:
 
 
 def popen_guarded(args, **kwargs) -> tuple[subprocess.Popen, int | None]:
-    """带进程树隔离的 Popen。返回 (proc, job_handle)。job_handle 为 None 表示无隔离。"""
+    """带进程树隔离的 Popen。返回 (proc, job_handle)。job_handle 为 None 表示无隔离。
+
+    非 Windows 没有 Job Object，退化为 POSIX 进程组（start_new_session），
+    kill_tree 时 killpg 整组杀——否则孙进程占着输出管道，communicate 会卡满超时。
+    """
+    if not _IS_WIN:
+        kwargs.setdefault("start_new_session", True)
     proc = subprocess.Popen(args, **kwargs)
     job = _make_job()
     if job:
@@ -166,6 +173,11 @@ def _kill_tree(proc: subprocess.Popen, job: int | None) -> None:
             _kernel32.TerminateJobObject(job, 1)
         except Exception:  # noqa: BLE001
             pass
+    elif hasattr(os, "killpg") and hasattr(os, "setsid"):
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
     proc.kill()
     try:
         proc.wait(timeout=5)
@@ -179,7 +191,7 @@ def _kill_tree(proc: subprocess.Popen, job: int | None) -> None:
 # patch 顺序有讲究：先把要用的模块 import 完，再打补丁——否则连 import 都会过不了自己。
 _GUARD_SRC = '''
 # --- 墟沙箱守卫（自动注入，勿改） ---
-import builtins, io, os, sys, tempfile, shutil, subprocess, socket
+import builtins, io, os, re, sys, tempfile, shutil, subprocess, socket
 
 def _roots(name):
     return [p for p in os.environ.get(name, "").split(os.pathsep) if p]
@@ -190,6 +202,11 @@ _WRITE = _roots("AGENT_SANDBOX_WRITE_ROOTS")
 _READ += [sys.prefix, sys.exec_prefix, tempfile.gettempdir()]
 _WRITE += [tempfile.gettempdir()]
 
+_ON_WIN = sys.platform == "win32"
+# 非 Windows 平台没有盘符语义：C:/Windows/x.txt 会被解析成 cwd 下的相对路径，
+# 恰好落进白名单。模型给盘符路径大概率是想越界，一律拒绝。
+_DRIVE = re.compile(r"^[A-Za-z]:[/\\\\]|^\\\\\\\\|^//")
+
 def _norm(p):
     try:
         return os.path.normcase(os.path.realpath(str(p)))
@@ -197,6 +214,8 @@ def _norm(p):
         return os.path.normcase(os.path.abspath(str(p)))
 
 def _inside(p, roots):
+    if not _ON_WIN and _DRIVE.match(str(p)):
+        return False
     n = _norm(p)
     for r in roots:
         rn = _norm(r)

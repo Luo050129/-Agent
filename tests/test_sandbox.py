@@ -18,7 +18,12 @@ from miniagent.config import BASE_DIR  # noqa: E402
 from miniagent.core.rules import Policy  # noqa: E402
 from miniagent.tools import runtime, sandbox  # noqa: E402
 
-NOPE = "C:/Windows/win.ini"  # 越界读的固定靶子
+# 越界靶子按平台选：Windows 盘符路径在 Linux 上没有越界语义
+IS_WIN = sys.platform == "win32"
+NOPE = "C:/Windows/win.ini" if IS_WIN else "/root/agent_sb_probe.txt"  # 越界读/删靶（可不存在）
+NOPE_REAL = "C:/Windows/win.ini" if IS_WIN else "/etc/hostname"  # 真实存在且越界可读
+WRITE_NOPE = "C:/_sb_escape.txt" if IS_WIN else "/root/_sb_escape.txt"  # 越界写靶
+RMTREE_NOPE = "C:/Windows/Temp" if IS_WIN else "/root/agent_sb_dir"  # 越界 rmtree 靶
 
 
 def _enable_default_roots() -> None:
@@ -51,10 +56,10 @@ def test_normal_execution() -> list[tuple[str, bool]]:
 def test_fs_guard() -> list[tuple[str, bool]]:
     _enable_default_roots()
     outside_read = runtime.run_python(f"open({NOPE!r}).read()")
-    outside_write = runtime.run_python("open('C:/_sb_escape.txt', 'w').write('x')")
+    outside_write = runtime.run_python(f"open({WRITE_NOPE!r}, 'w').write('x')")
     outside_pathlib = runtime.run_python(f"from pathlib import Path; Path({NOPE!r}).read_text()")
     outside_unlink = runtime.run_python(f"import os; os.remove({NOPE!r})")
-    outside_rmtree = runtime.run_python("import shutil; shutil.rmtree('C:/Windows/Temp')")
+    outside_rmtree = runtime.run_python(f"import shutil; shutil.rmtree({RMTREE_NOPE!r})")
     return [
         ("越界读被拦", "[SANDBOX]" in outside_read and "exit_code=3" in outside_read),
         ("结果带 [ERR] 标记", outside_read.startswith("[ERR]")),
@@ -62,7 +67,7 @@ def test_fs_guard() -> list[tuple[str, bool]]:
         ("pathlib 越界读被拦", "[SANDBOX]" in outside_pathlib),
         ("os.remove 越界被拦", "[SANDBOX]" in outside_unlink),
         ("shutil.rmtree 越界被拦", "[SANDBOX]" in outside_rmtree),
-        ("盘根探针没被写出来", not Path("C:/_sb_escape.txt").exists()),
+        ("越界探针没被写出来", not Path(WRITE_NOPE).exists()),
         ("拦截信息带允许范围", "允许读" in outside_read),
     ]
 
@@ -124,7 +129,7 @@ def test_disabled_fallback() -> list[tuple[str, bool]]:
     os.environ["AGENT_SANDBOX"] = "0"
     try:
         _enable_default_roots()  # 开关关着，set_roots 应为空操作
-        result = runtime.run_python(f"print(open({NOPE!r}).readline().strip()[:10])")
+        result = runtime.run_python(f"print(open({NOPE_REAL!r}, encoding='utf-8', errors='replace').readline().strip()[:10])")
         live = runtime.run_python("print('alive')")
         checks = [
             ("关闭后越界读放行（老行为）", "[SANDBOX]" not in result and "exit_code=0" in result),
@@ -139,10 +144,10 @@ def test_roots_follow_policy() -> list[tuple[str, bool]]:
     """内核每次执行前同步白名单：allow_read 加进来的路径守卫要认。"""
     policy = Policy.default()
     sandbox.set_roots(policy.read_roots, policy.write_roots)
-    blocked = runtime.run_python(f"open({NOPE!r}).read()")
-    policy.allow_read(NOPE)
+    blocked = runtime.run_python(f"open({NOPE_REAL!r}).read()")
+    policy.allow_read(NOPE_REAL)
     sandbox.set_roots(policy.read_roots, policy.write_roots)
-    allowed = runtime.run_python(f"print(open({NOPE!r}, encoding='utf-8', errors='replace').readline().strip()[:5])")
+    allowed = runtime.run_python(f"print(open({NOPE_REAL!r}, encoding='utf-8', errors='replace').readline().strip()[:5])")
     return [
         ("同步前越界被拦", "[SANDBOX]" in blocked),
         ("allow_read 加白后放行", "[SANDBOX]" not in allowed and "exit_code=0" in allowed),
