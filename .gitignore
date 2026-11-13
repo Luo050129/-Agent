@@ -8,7 +8,8 @@ Desktop.ini
 *.log
 
 # 装进来的第三方插件不进版本库，示例留在 examples/
-plugins/
+# 注意锚定根目录：无斜杠前缀的 plugins/ 会连 miniagent/plugins/ 包一起忽略
+/plugins/*
 
 # 运行记录（工具调用日志）
 .agent/
