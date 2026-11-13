@@ -21,6 +21,10 @@ import { LLM } from "../model/client.ts";
 import { undoLast } from "../tools/checkpoints.ts";
 import type { Message, ToolCall } from "../wire.ts";
 import { ConsoleSink, color } from "./sink.ts";
+import { TuiSink } from "./tui.ts";
+import { mcpManager } from "../mcp/manager.ts";
+import { loadTools as loadPluginTools } from "../plugins.ts";
+import { setExtraTools } from "../tools/index.ts";
 
 interface Args {
   prompt?: string;
@@ -31,12 +35,13 @@ interface Args {
   mode: string;
   resume?: string;
   persist: boolean;
+  tui: boolean;
   selftest: boolean;
   help: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { maxSteps: 20, mode: "react", persist: true, selftest: false, help: false };
+  const args: Args = { maxSteps: 20, mode: "react", persist: true, tui: false, selftest: false, help: false };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i] as string;
     const next = (): string => {
@@ -71,6 +76,9 @@ function parseArgs(argv: string[]): Args {
         break;
       case "--no-persist":
         args.persist = false;
+        break;
+      case "--tui":
+        args.tui = true;
         break;
       case "--selftest":
         args.selftest = true;
@@ -148,6 +156,7 @@ function printHelp(): void {
       "      --mode <react|plan>  边做边看 / 先出计划，默认 react",
       "      --resume [id]     恢复历史会话，省略 id 就是最近一次",
       "      --no-persist      本次对话不落盘",
+      "      --tui             富终端界面（实时状态行 + 计划进度）",
       "      --selftest        无 Key 自检整条链路",
       "",
       "交互命令：/undo 撤销最近一次写入 · /clear 开新会话 · /exit 退出",
@@ -194,8 +203,24 @@ async function main(): Promise<number> {
   }
 
   const mode = normalizeMode(args.mode);
+
+  // 先装扩展再建会话：技能清单和 MCP 工具都要进系统提示
+  const mcpTools = await mcpManager.load().catch(() => []);
+  const pluginTools = await loadPluginTools();
+  const extra = setExtraTools([...mcpTools, ...pluginTools.schemas], pluginTools.handlers);
+  if (mcpTools.length > 0 || pluginTools.loaded.length > 0) {
+    console.log(
+      color.dim(
+        `已加载 ${mcpTools.length} 个 MCP 工具 · 插件 ${pluginTools.loaded.length} 个 · 技能 ${extra} 项`,
+      ),
+    );
+  }
+  for (const bad of pluginTools.failed) {
+    console.log(color.yellow(`插件 ${bad.name} 加载失败：${bad.error}`));
+  }
+
   let { session, store } = openSession(args);
-  const sink = new ConsoleSink();
+  const sink = args.tui ? new TuiSink(llm.label, mode) : new ConsoleSink();
   const agent = new Agent(llm, { maxSteps: args.maxSteps, mode });
 
   if (args.prompt) {

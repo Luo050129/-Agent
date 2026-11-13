@@ -6,7 +6,7 @@ Python 版的同架构重写。保留了「零运行时依赖」这个底线：*
 ```bash
 node --version          # 需要 >= 22.6
 npm run selftest        # 无 Key 自检整条链路
-npm test                # 75 项测试
+npm test                # 105 项测试（11 个套件）
 
 # 用起来（先配 Key：环境变量或 ts-agent/.env）
 node --experimental-strip-types src/cli/main.ts "统计这个目录有多少文件"
@@ -45,18 +45,29 @@ node --experimental-strip-types src/cli/main.ts            # 交互模式（/und
 | `core/loop.py`（Plan 模式） | `src/core/plan.ts` + loop 内 runPlan | ✅ 完成（含卡住重规划一次） |
 | `core/completion.py` 验证式自检 | `src/core/completion.ts` | ✅ 完成（工具反证 + NOVERIFY 放行） |
 | `core/persistence.py` 会话存档 | `src/core/persistence.ts` | ✅ 完成（JSONL + 崩溃修复 + --resume） |
-| `tools/sandbox.py` 沙箱 | — | ⬜ 待做（Node 无 Job Object，需另想） |
+| `tools/sandbox.py` 沙箱 | `src/tools/sandbox.ts` + `guard-prelude.mjs` | ✅ 完成（三层组合，见下） |
 | `tools/checkpoints.py` 撤销 | `src/tools/checkpoints.ts` | ✅ 完成（环形 20 + `/undo`） |
-| `mcp/*` | — | ⬜ 待做（可用官方 SDK） |
-| `plugins/*` `skills/*` | — | ⬜ 待做 |
-| `ui/*` tkinter 界面 | `src/cli/*` 终端 | 部分：终端输出已通，TUI 待做 |
-| 24 个测试套件 | 8 个套件 75 项 | 部分（核心逻辑全覆盖） |
+| `mcp/*` | `src/mcp/{client,manager}.ts` | ✅ 完成（零依赖手写 JSON-RPC + 工具清单压缩） |
+| `plugins/*` `skills/*` | `src/plugins.ts` · `src/skills.ts` · `src/zip.ts` | ✅ 完成（GitHub 安装，zip 自己解） |
+| `ui/*` tkinter 界面 | `src/cli/{sink,tui}.ts` | ✅ 完成（富终端：实时状态行 + 计划进度） |
+| 24 个测试套件 | 11 个套件 105 项 | ✅ 核心逻辑全覆盖 |
 
 ## 语言差异带来的设计调整
 
 1. **`run_python` → `run_node`**：用 Node 自己算数，不再依赖本机装没装 Python。
-2. **没有 `ctypes` 直调 Win32**：Python 版的沙箱用 Job Object 做进程树隔离，
-   Node 侧要等价能力得走 FFI 原生绑定（等于引入编译期依赖），所以沙箱留到后面单独设计。
+2. **沙箱换了实现方式**：Python 版用 ctypes 直接调 Windows Job Object（内核级隔离）。
+   Node 没有对应 API，试过官方权限模型 `--experimental-permission`，但它在 Windows +
+   中文路径下连自身模块加载都会被拒，不可用。最终用三层组合：
+
+   | 层 | 做法 | 强度 |
+   | --- | --- | --- |
+   | 堆上限 | `--max-old-space-size`（默认 512MB，`XU_SANDBOX_HEAP_MB` 可调） | 硬 |
+   | 杀树 | 超时 `taskkill /T /F`（Windows）/ 进程组 `SIGKILL`（POSIX） | 硬 |
+   | 守卫 | 子进程内 patch `fs` / `child_process` / `net`，按白名单拦截；`Module._load` 钩子拦住 require | 软（常规代码绕不过） |
+
+   再加静态预检：`import { readFileSync } from "node:fs"` 这类命名导入拿到的是模块快照，
+   patch 管不到，所以入口直接拒绝并提示改成默认导入。**诚实结论**：这不如 Python 版的
+   内核级隔离，但比不设防强得多，且保住了零依赖。
 3. **超时杀树改用 `taskkill /T /F`**（Windows）/ `SIGKILL`（POSIX）—— 效果等价，实现不同。
 4. **配置目录仍叫 `.agent`**，Key 仍然「默认没有，用户自己配」：`src/config.ts` 一个环境变量都没有内置值。
 

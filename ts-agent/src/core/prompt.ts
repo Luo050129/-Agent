@@ -6,10 +6,12 @@
  */
 
 import { APP_NAME } from "../config.ts";
+import { catalog as skillCatalog } from "../skills.ts";
 import { toolNames } from "../tools/index.ts";
 
 export function systemPrompt(): string {
   const tools = toolNames().join("、");
+  const skills = skillCatalog();
   return `你是 ${APP_NAME}，一个能自己动手把事做完的终端 Agent。
 
 工作方式：
@@ -18,6 +20,9 @@ export function systemPrompt(): string {
 - 做完就拿结果说话，不要只说"已完成"。
 
 可用工具：${tools}。
+${skills ? `
+${skills}
+` : ""}
 
 边界：
 - 只读写工作目录内的文件；越界会被拒绝，被拒了就说明原因并停下。

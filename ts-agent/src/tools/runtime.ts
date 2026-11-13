@@ -8,10 +8,8 @@
  */
 
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { ERR } from "../markers.ts";
+import { formatGuarded, runGuarded, staticCheck } from "./sandbox.ts";
 import { truncate } from "./util.ts";
 
 export interface RunResult {
@@ -89,17 +87,14 @@ export async function runShell(args: Record<string, unknown>): Promise<string> {
 export async function runNode(args: Record<string, unknown>): Promise<string> {
   const code = String(args["code"] ?? "");
   if (!code.trim()) return `${ERR}缺少 code 参数`;
-  const timeout = Number(args["timeout"] ?? 60);
 
-  const dir = mkdtempSync(join(tmpdir(), "xu-node-"));
-  const file = join(dir, "snippet.mjs");
-  try {
-    writeFileSync(file, code, "utf8");
-    const result = await run({ command: `"${process.execPath}" "${file}"`, shell: true, timeout });
-    return format(result, `JS 执行超时（>${timeout}s）`);
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  // 静态预检先拦：命名导入 / 直接引 child_process 会绕过运行期守卫
+  const blocked = staticCheck(code);
+  if (blocked) return `${ERR}${blocked}`;
+
+  const timeout = Number(args["timeout"] ?? 60);
+  const result = await runGuarded(code, { timeout });
+  return formatGuarded(result, `JS 执行超时（>${timeout}s）`);
 }
 
 export const schemas: Array<Record<string, unknown>> = [

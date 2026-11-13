@@ -8,7 +8,7 @@
  * 每一步都问熔断「还允许吗」，任何终止路径都给人话报告。
  */
 
-import { DANGEROUS, TOOL_SCHEMAS, execute } from "../tools/index.ts";
+import { DANGEROUS, execute, toolSchemas } from "../tools/index.ts";
 import type { Message, ToolCall } from "../wire.ts";
 import { CompletionJudge, type VerifyOutcome } from "./completion.ts";
 import { ContextManager } from "./context.ts";
@@ -146,7 +146,7 @@ export class Agent {
       let text = "";
       let calls: ToolCall[] = [];
       try {
-        const result = await this.llm.stream(view, TOOL_SCHEMAS, (piece) => sink.text(piece));
+        const result = await this.llm.stream(view, toolSchemas(), (piece) => sink.text(piece));
         text = result.text;
         calls = result.calls;
       } catch (err) {
@@ -171,7 +171,7 @@ export class Agent {
 
           const outcome: VerifyOutcome = await this.judge.verify(
             session.messages,
-            TOOL_SCHEMAS,
+            toolSchemas(),
             (msgs, tools) => this.llm.stream(msgs, tools),
           );
 
@@ -370,7 +370,7 @@ export class Agent {
 
     // 整条计划收尾时做一次验证：拿得到证据才算真的做完
     if (this.verifyEnabled && session.toolCalls > 0) {
-      const outcome = await this.judge.verify(session.messages, TOOL_SCHEMAS, (msgs, tools) =>
+      const outcome = await this.judge.verify(session.messages, toolSchemas(), (msgs, tools) =>
         this.llm.stream(msgs, tools),
       );
       if (outcome.kind === "todo") {
