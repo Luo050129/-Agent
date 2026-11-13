@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import os
+from ipaddress import ip_address
+from urllib.parse import urlparse
 import time
 import urllib.error
 import urllib.request
@@ -86,7 +88,7 @@ class LLM:
         self.protocol = get_protocol(self.protocol_name)
         self.base_url = base.rstrip("/")
         self.quirks = quirks
-        self._key = api_key_value or _hinted_key(candidates) or _optional_key()
+        self._key = api_key_value or _hinted_key(candidates) or _optional_key(self.base_url)
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.timeout = timeout if timeout is not None else _env_float("AGENT_LLM_TIMEOUT", 60)
@@ -208,9 +210,26 @@ class LLM:
         return "".join(text_parts), [calls[i] for i in sorted(calls)]
 
 
-def _optional_key() -> str:
-    """本地模型（Ollama / vLLM / LM Studio）不需要 Key，给个占位。"""
+def _is_local(base_url: str) -> bool:
+    """地址是否指向本机 / 内网（自建 Ollama、vLLM、LM Studio 这类不需要 Key 的）。"""
+    host = (urlparse(base_url).hostname or "").lower()
+    if host in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+        return True
+    try:
+        return ip_address(host).is_private
+    except ValueError:
+        return False  # api.deepseek.com 这类域名：是远程，必须有 Key
+
+
+def _optional_key(base_url: str) -> str:
+    """本地模型不需要 Key，给个占位。
+
+    远程地址不给占位：缺 Key 时宁可启动就报错、把配置方式讲清楚，
+    也别带着假 Key 发请求让用户对着一句 401 猜。
+    """
     try:
         return api_key()
     except ConfigError:
-        return "not-needed"
+        if _is_local(base_url):
+            return "not-needed"
+        raise
