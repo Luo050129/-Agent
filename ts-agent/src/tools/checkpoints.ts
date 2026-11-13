@@ -17,6 +17,20 @@ import { ERR } from "../markers.ts";
 export const CHECKPOINT_DIR = join(AGENT_DIR, "checkpoints");
 export const MAX_CHECKPOINTS = 20;
 
+/**
+ * 检查点文件名 = 定长毫秒时间戳 + 单调递增序号。
+ *
+ * 只用 Date.now() 会出事：同一毫秒内连写两个文件，前缀完全相同，
+ * 靠随机后缀排序 → 撤销顺序变随机。序号保证同毫秒内也严格递增，
+ * 定长时间戳保证跨毫秒的字典序仍然正确。
+ */
+let sequence = 0;
+
+function nextCheckpointId(): string {
+  sequence += 1;
+  return `${String(Date.now()).padStart(13, "0")}-${String(sequence).padStart(6, "0")}`;
+}
+
 export interface Snapshot {
   ts: string;
   path: string;
@@ -56,7 +70,7 @@ export function save(snap: Snapshot | null, directory: string = CHECKPOINT_DIR):
   if (!snap) return null;
   try {
     mkdirSync(directory, { recursive: true });
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const id = nextCheckpointId();
     writeFileSync(join(directory, `${id}.json`), JSON.stringify(snap), "utf8");
     prune(directory);
     return id;
