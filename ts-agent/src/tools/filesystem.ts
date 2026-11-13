@@ -22,7 +22,12 @@ function roots(kind: "read" | "write"): string[] {
   return [...base, ...extra].map((p) => resolve(p));
 }
 
+/** Windows 盘符 / UNC 路径：非 Windows 平台 resolve 会把它当相对路径，必须特殊对待 */
+const DRIVE_PATH = /^[A-Za-z]:[\\/]|^\\\\|^\/\//;
+
 function inside(path: string, allowed: string[]): boolean {
+  // 非 Windows 没有盘符语义：C:/Windows/x 会被解析进 cwd，恰好落进白名单
+  if (process.platform !== "win32" && DRIVE_PATH.test(path)) return false;
   const target = resolve(path);
   return allowed.some((root) => target === root || target.startsWith(root + (process.platform === "win32" ? "\\" : "/")));
 }
