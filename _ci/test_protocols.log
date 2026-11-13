@@ -1,0 +1,43 @@
+[protocols] 开始
+  PASS  openai 打到了 chat/completions
+  PASS  openai 鉴权是 Bearer
+  PASS  openai 透传 messages
+  PASS  openai 带 stream_options
+  PASS  openai 文本拼接
+  PASS  openai 工具名拼接
+  PASS  openai 工具参数拼接
+  PASS  openai 记住用量
+  PASS  anthropic 打到了 /messages
+  PASS  anthropic 用 x-api-key
+  PASS  anthropic 带版本头
+  PASS  anthropic 没走 Bearer
+  PASS  anthropic system 提到顶层
+  PASS  anthropic 工具用 input_schema
+  PASS  anthropic 工具结果变 tool_result
+  PASS  anthropic 工具调用变 tool_use
+  PASS  anthropic 角色交替（无连续同角色）
+  PASS  anthropic 文本拼接
+  PASS  anthropic 工具参数靠片段拼接
+  PASS  anthropic 工具 id 保留
+  PASS  gemini 路径带模型与动作
+  PASS  gemini 用 alt=sse
+  PASS  gemini 用 x-goog-api-key
+  PASS  gemini 角色是 user/model
+  PASS  gemini system 变 systemInstruction
+  PASS  gemini 工具用 functionDeclarations
+  PASS  gemini 工具结果变 functionResponse
+  PASS  gemini functionResponse 带函数名
+  PASS  gemini 文本拼接
+  PASS  gemini functionCall 解析
+  PASS  gemini 参数是完整 JSON
+  PASS  responses 打到了 /responses
+  PASS  responses 用 input 数组
+  PASS  responses 工具是扁平定义
+  PASS  responses 工具带 name 而非嵌套
+  PASS  responses 工具结果变 function_call_output
+  PASS  responses 工具调用变 function_call
+  PASS  responses 文本用 input_text
+  PASS  responses 文本拼接
+  PASS  responses 工具调用解析
+  PASS  responses 参数增量拼接
+[protocols] 全部通过

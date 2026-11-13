@@ -1,0 +1,27 @@
+[skills] 开始
+  PASS  发现了内置技能
+  PASS  标题被解析出来
+  PASS  描述被解析出来
+  PASS  能按文件名找到
+  PASS  能按标题找到
+  PASS  加载出正文
+  PASS  带上了技能标识
+  PASS  找不到时给提示
+  PASS  列表包含内置技能
+  PASS  清单进了系统提示
+  PASS  提示里说明了用法
+  PASS  临时目录技能被发现
+  PASS  标题取自一级标题
+  PASS  描述取自引用行
+  PASS  正文可读
+  PASS  本地目录装进 2 个
+  PASS  discover 能找到
+  PASS  单文件安装
+  PASS  空目录报错
+  PASS  不存在的路径报错
+  PASS  整仓库只收最浅层
+  PASS  非 md 没被装进来
+  PASS  子目录安装带名字前缀
+  PASS  子目录不存在报错
+  PASS  清单包含已装技能
+[skills] 全部通过

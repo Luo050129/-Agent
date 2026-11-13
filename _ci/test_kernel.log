@@ -1,0 +1,30 @@
+[kernel] 开始
+  PASS  越界写入被拦下
+  PASS  拦截原因回灌给模型
+  PASS  循环继续并收尾
+  PASS  触发了一次自评
+  PASS  未完成时插入返工提示
+  PASS  返工后拿到最终答案
+  PASS  自评只做一次就收
+  PASS  验证调用真被执行
+  PASS  验证通过后交付
+  PASS  状态标记已验证
+  PASS  验证消息进了历史
+  PASS  验证失败触发返工
+  PASS  打回后重新交付
+  PASS  未验证不算数
+  PASS  探针只消耗一次预算
+  PASS  重复调用被识别
+  PASS  给出了停止原因
+  PASS  没有无限空转
+  PASS  超长结果被压缩
+  PASS  压缩后长度可控
+  PASS  有规划阶段
+  PASS  有执行阶段
+  PASS  有完成状态
+  PASS  记录了上下文占用
+  PASS  记录了输出 token
+  PASS  完成度到 1
+  PASS  撞到步数上限会标 blocked
+  PASS  给出收尾提示
+[kernel] 全部通过

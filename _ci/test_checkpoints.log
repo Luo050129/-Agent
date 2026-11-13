@@ -1,0 +1,29 @@
+[checkpoints] 开始
+  PASS  新建文件成功
+  PASS  检查点已落盘
+  PASS  撤销有结果
+  PASS  文件真的没了
+  PASS  检查点用后即焚
+  PASS  覆盖后内容变了
+  PASS  撤销成功
+  PASS  原内容回来了
+  PASS  撤销信息带时间
+  PASS  三次写入
+  PASS  三个检查点
+  PASS  撤销一次到 v2
+  PASS  撤销两次到 v1
+  PASS  撤销三次到 v0
+  PASS  检查点清空
+  PASS  空栈撤销有提示
+  PASS  环形只留 20 个
+  PASS  保留的是最新内容
+  PASS  最旧检查点还原到 round 4
+  PASS  不存在文件的快照标 existed=False
+  PASS  没 save 就没有检查点
+  PASS  二进制文件快照返回 None
+  PASS  覆盖二进制不留假检查点
+  PASS  空栈提示明确
+  PASS  两条记录
+  PASS  新的在前
+  PASS  字段齐全
+[checkpoints] 全部通过

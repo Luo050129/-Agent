@@ -1,0 +1,33 @@
+[context] 开始
+  PASS  空字符串为 0
+  PASS  中文按字算
+  PASS  英文按 4 字符 1 token
+  PASS  消息列表有开销
+  PASS  短结果原样返回
+  PASS  长结果被压缩
+  PASS  压缩后有提示标记
+  PASS  压缩后仍在限额附近
+  PASS  小历史不裁剪
+  PASS  消息条数不变
+  PASS  统计里有 token 数
+  PASS  原始历史未被修改
+  PASS  大历史被裁剪
+  PASS  插入了摘要
+  PASS  第一条仍是 system
+  PASS  第二条是摘要
+  PASS  裁剪后 token 明显变小
+  PASS  裁剪后不超预算
+  PASS  至少留下一条历史
+  PASS  没有孤儿 tool 消息
+  PASS  budget=300 不超预算
+  PASS  budget=300 有裁剪
+  PASS  budget=600 不超预算
+  PASS  budget=600 有裁剪
+  PASS  budget=1200 不超预算
+  PASS  budget=1200 有裁剪
+  PASS  记录文件已生成
+  PASS  写了一行 json
+  PASS  字段齐全
+  PASS  结果被截断
+  PASS  关闭时不写文件
+[context] 全部通过

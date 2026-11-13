@@ -1,0 +1,13 @@
+[completion] 开始
+  PASS  没动工具时完成度低
+  PASS  工具都成功则分数较高
+  PASS  连续报错会被扣分
+  PASS  分数被夹在 0.1~0.95
+  PASS  只说 DONE 无证据 → 放行但未验证
+  PASS  TODO 判为未完成
+  PASS  NOVERIFY 带原因放行
+  PASS  验证调用原样返回
+  PASS  验证调用数被封顶
+  PASS  探针失败不阻塞交付
+  PASS  关掉验证直接放行
+[completion] 全部通过

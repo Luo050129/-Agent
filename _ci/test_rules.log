@@ -1,0 +1,32 @@
+[rules] 开始
+  PASS  项目内路径放行
+  PASS  项目外路径拒绝
+  PASS  项目内写入放行
+  PASS  项目外写入被拦
+  PASS  项目外读取被拦
+  PASS  文档读取越界被拦
+  PASS  未附加时被拦
+  PASS  附加后同一文件放行
+  PASS  同目录其他文件仍被拦
+  PASS  普通命令放行
+  PASS  格式化命令被拦
+  PASS  关机命令被拦
+  PASS  递归删根被拦
+  PASS  代码删根被拦
+  PASS  重定向越界被拦
+  PASS  项目内重定向放行
+  PASS  相对路径重定向放行
+  PASS  读到了运行时规则
+  PASS  不注入 agent.md 的开发约定
+  PASS  系统提示里带了项目规则
+  PASS  规则内容真的注入了
+  PASS  可以覆盖规则内容
+  PASS  预算裁剪确实生效
+  PASS  小预算也不返回空
+  PASS  小预算不超太多
+  PASS  裁剪按整节，不留半截标题
+  PASS  裁剪会说明还剩几节
+  PASS  预算够时不加省略提示
+  PASS  能读到指定路径的规则
+  PASS  文件改了缓存会失效
+[rules] 全部通过

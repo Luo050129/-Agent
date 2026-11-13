@@ -1,0 +1,18 @@
+[documents] 开始
+  PASS  docx 提到第一段
+  PASS  docx 合并了同段多块
+  PASS  xlsx 有工作表名
+  PASS  xlsx 解析共享字符串
+  PASS  xlsx 解析数字与行内串
+  PASS  pdf 提取压缩流文本
+  PASS  pdf 提取未压缩流文本
+  PASS  CID 字体靠 ToUnicode 还原
+  PASS  没有 ToUnicode 时如实说做不到
+  PASS  图片返回尺寸
+  PASS  图片说明读不了内容
+  PASS  markdown 正常读取
+  PASS  坏文件给出提示
+  PASS  不存在的文件
+  PASS  不支持的扩展名
+  PASS  超长内容被截断
+[documents] 全部通过

@@ -1,0 +1,40 @@
+[guard] 开始
+  PASS  第一次放行
+  PASS  第二次放行
+  PASS  第三次拦截
+  PASS  反复失败会被拦
+  PASS  工具总数上限生效
+  PASS  时间预算生效
+  PASS  连续越界会停
+  PASS  无进展会停
+  PASS  报告不是空的
+  PASS  前缀常量两边一致
+  PASS  [ERR] 判为 error
+  PASS  [OK] 判为 ok
+  PASS  无前缀判为 unknown
+  PASS  含敏感词的正常内容不误判
+  PASS  同样的内容不加豁免会被兜底判失败
+  PASS  正文深处的敏感词不误判
+  PASS  tag_result 给歧义成功结果补 OK
+  PASS  tag_result 不碰已有的 ERR
+  PASS  读不存在的文件带 ERR
+  PASS  跑失败的命令带 ERR
+  PASS  未知工具带 ERR
+  PASS  参数不是 JSON 带 ERR
+  PASS  成功命令不带 ERR
+  PASS  重复调用被熔断
+  PASS  没有无限空转
+  PASS  给了收手报告
+  PASS  报告里有卡点说明
+  PASS  状态标为 blocked
+  PASS  反复失败被拦
+  PASS  没有一直重试
+  PASS  报告里提到失败
+  PASS  超出工具预算会停
+  PASS  没有执行剩余调用
+  PASS  时间超限会停
+  PASS  时间超限给报告
+  PASS  越界被规则拦
+  PASS  连续越界会收手
+  PASS  没有真的写到系统盘
+[guard] 全部通过

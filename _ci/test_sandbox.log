@@ -1,0 +1,36 @@
+[sandbox] 开始
+  PASS  能算数
+  FAIL  能读工作区文件
+  PASS  能写工作区文件
+  FAIL  pathlib 正常
+  PASS  stdlib 可用
+  PASS  tempfile 可用
+  PASS  shell 正常
+  PASS  工作区写入真的落了盘
+  PASS  守卫源码能编译
+  PASS  越界读被拦
+  PASS  结果带 [ERR] 标记
+  PASS  越界写被拦
+  PASS  pathlib 越界读被拦
+  PASS  os.remove 越界被拦
+  PASS  shutil.rmtree 越界被拦
+  PASS  越界探针没被写出来
+  PASS  拦截信息带允许范围
+  PASS  subprocess 被拦
+  PASS  os.system 被拦
+  PASS  socket 被拦
+  PASS  超时返回错误
+  PASS  超时后及时收手（没有干等 30 秒）
+  PASS  报告进程树已终止
+  PASS  type 绝对路径越界被拦
+  PASS  反斜杠路径同样被拦
+  PASS  get-content 带引号被拦
+  PASS  工作区内文件放行
+  PASS  相对路径不检查（没信息可判）
+  PASS  管道分页 | more 不误伤
+  PASS  setx 持久化写环境变量被拦
+  PASS  关闭后越界读放行（老行为）
+  PASS  关闭后正常执行照旧
+  PASS  同步前越界被拦
+  PASS  allow_read 加白后放行
+[sandbox] 存在失败项

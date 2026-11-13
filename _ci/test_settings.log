@@ -1,0 +1,25 @@
+[settings] 开始
+  PASS  没有文件时给默认值
+  PASS  保存成功
+  PASS  读回来一致
+  PASS  字体族也记住了
+  PASS  坏文件回退默认，不炸
+  PASS  非法主题回落
+  PASS  越界字号被夹紧
+  PASS  能拼出 spec
+  PASS  缺环境变量时自动生成
+  PASS  添加成功
+  PASS  能读回来
+  PASS  重复添加被拒
+  PASS  与内置重名被拒
+  PASS  空显示名不让建
+  PASS  删除成功
+  PASS  删完就没了
+  PASS  删不存在的不报错
+  PASS  坏文件返回空列表
+  PASS  自定义进 all_specs
+  PASS  find 能找到自定义
+  PASS  自定义排在内置前面
+  PASS  自定义也出现在主流列表
+  PASS  内置模型没被挤掉
+[settings] 全部通过

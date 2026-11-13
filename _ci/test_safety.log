@@ -1,0 +1,20 @@
+[safety] 开始
+  PASS  注入被判为 warn
+  PASS  注入了给理由
+  PASS  英文注入也能认出来
+  PASS  高风险请求判为 high
+  PASS  高风险提示收紧边界
+  PASS  正常请求不误报
+  PASS  正常请求没有系统提醒
+  PASS  提醒里写了不能改规则
+  PASS  高风险提醒禁止操作细节
+  PASS  审计文件已写
+  PASS  审计记了等级和原因
+  PASS  审计截断了原文
+  PASS  系统提示被加固
+  PASS  用户收到提示
+  PASS  原始用户消息没被改写
+  PASS  规则不可被用户覆盖
+  PASS  删掉了旧的以用户为准
+  PASS  提示里要求敏感操作先问
+[safety] 全部通过

@@ -1,0 +1,38 @@
+[persistence] 开始
+  PASS  没聊过天不建文件
+  PASS  首条消息触发建文件
+  PASS  meta 在最前
+  PASS  meta 带自动标题
+  PASS  消息行带 role/content
+  PASS  assistant 带工具调用
+  PASS  tool 结果落盘
+  PASS  后写的标题生效
+  PASS  title 行已落盘
+  PASS  系统提示是新生成的
+  PASS  存档里的 system 被丢弃
+  PASS  用户消息恢复
+  PASS  工具调用恢复
+  PASS  工具结果恢复
+  PASS  steps 重算
+  PASS  tool_calls 重算
+  PASS  恢复的会话已挂观察者
+  PASS  完整配对的消息保留
+  PASS  尾部孤儿 tool 被剥掉
+  PASS  无结果的 assistant 被剥掉
+  PASS  半截行被跳过
+  PASS  恢复后还能继续聊
+  PASS  观察者异常不影响对话
+  PASS  坏观察者被摘除
+  PASS  列表倒序（新的在前）
+  PASS  turns 计数正确
+  PASS  标题进入列表
+  PASS  resume last 定位最新
+  PASS  resume 按 ID 定位
+  PASS  找不到的 ID 报错
+  PASS  闭环跑完有答复
+  PASS  用户消息落盘
+  PASS  assistant 带工具调用落盘
+  PASS  工具结果落盘
+  PASS  最终答复落盘
+  PASS  恢复后能接着跑
+[persistence] 全部通过

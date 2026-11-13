@@ -1,0 +1,13 @@
+[36m[selftest] 开始[0m
+[2m  ↳ run_shell {"command": "echo hello-agent"}[0m
+[2mexit_code=0
+stdout:
+hello-agent[0m
+[2m  ── 第 1 步完成 ──[0m
+自检通过：模型→工具→回灌→答复 链路正常。
+  PASS  循环执行了 2 轮
+  PASS  final answer 非空
+  PASS  历史里带 tool 消息
+  PASS  tool_call_id 正确
+  PASS  统计到了工具次数
+[32m[selftest] 全部通过[0m

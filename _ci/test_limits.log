@@ -1,0 +1,12 @@
+[limits] 开始
+  PASS  max_same_call=3 在 [2,5]
+  PASS  max_call_failures=2 在 [1,3]
+  PASS  max_unproductive=4 在 [3,6]
+  PASS  max_fail_streak=6 在 [4,10]
+  PASS  max_tool_calls=40 与上下文预算匹配（42000 ≤ 80000）
+  PASS  max_seconds=300 ≥ 3 次最慢工具（180s）
+  PASS  max_seconds=300 ≤ 900
+  PASS  max_tool_calls ≥ max_steps（40 ≥ 20）
+  PASS  环境变量能覆盖工具上限
+  PASS  上下文预算有下限保护
+[limits] 全部通过

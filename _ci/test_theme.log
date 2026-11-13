@@ -1,0 +1,31 @@
+[theme] 开始
+  PASS  三套配色都在
+  PASS  light 字段齐全
+  PASS  light 全是 #RRGGBB
+  PASS  dark 字段齐全
+  PASS  dark 全是 #RRGGBB
+  PASS  warm 字段齐全
+  PASS  warm 全是 #RRGGBB
+  PASS  light 正文对比足够（0.93）
+  PASS  light 次要文字也看得见（0.58）
+  PASS  dark 正文对比足够（0.86）
+  PASS  dark 次要文字也看得见（0.52）
+  PASS  warm 正文对比足够（0.87）
+  PASS  warm 次要文字也看得见（0.57）
+  PASS  切到深色，BG 跟着变
+  PASS  切到米色，BG 跟着变
+  PASS  非法主题回落到浅色
+  PASS  切回原主题恢复正常
+  PASS  字号随倍数变大
+  PASS  越界倍数被夹紧
+  PASS  字号永远是整数
+  PASS  字体族可以换
+  PASS  字号整体被上调过（body >= 11）
+  PASS  小字也没低于 10
+  PASS  等宽字体保留
+  PASS  挑到第一个可用的
+  PASS  都不在时回落到首项
+  PASS  大小写不敏感
+  PASS  DPI 设置不抛异常
+  PASS  非 Windows 或已设置都能返回布尔
+[theme] 全部通过

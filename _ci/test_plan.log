@@ -1,0 +1,31 @@
+[plan] 开始
+  PASS  标准 JSON 能解析
+  PASS  带代码块也能解析
+  PASS  字符串数组也能解析
+  PASS  非 JSON 返回空
+  PASS  模式名归一化
+  PASS  非法模式回落到 react
+  PASS  默认模式是 react
+  PASS  先规划了一次
+  PASS  广播了计划
+  PASS  两步都执行了
+  PASS  步骤状态有 running
+  PASS  两步都标 done
+  PASS  汇总了一次
+  PASS  最终答复是汇总结果
+  PASS  对话里留下了步骤指令
+  PASS  工具结果进了历史
+  PASS  计划解析失败会提示
+  PASS  回退到 ReAct 仍给答复
+  PASS  规划只试了一次
+  PASS  失败触发了重规划
+  PASS  广播了新计划
+  PASS  有步骤被标 failed
+  PASS  重规划后能收尾
+  PASS  重规划只做一次
+  PASS  最终给出停止说明
+  PASS  状态标 blocked
+  PASS  react 模式不规划
+  PASS  react 模式直接给答案
+  PASS  react 模式不广播计划
+[plan] 全部通过

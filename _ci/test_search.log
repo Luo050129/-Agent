@@ -1,0 +1,24 @@
+[search] 开始
+  PASS  对话被收进来
+  PASS  内核指令被过滤掉
+  PASS  工具调用算任务
+  PASS  write_file 算产物
+  PASS  run_shell 仍算任务
+  PASS  全部三类都有
+  PASS  空关键词不返回结果
+  PASS  搜不到返回空
+  PASS  能匹配标题
+  PASS  能匹配详情
+  PASS  大小写不敏感
+  PASS  详情里的内容也能搜到
+  PASS  对话排在最前面
+  PASS  结果有上限
+  PASS  上限是 80
+  PASS  只搜对话
+  PASS  只搜任务
+  PASS  可以多选分类
+  PASS  不给分类就是全部
+  PASS  分类顺序是对话-任务-产物
+  PASS  结果仍按类别排序
+  PASS  counts 数对了
+[search] 全部通过

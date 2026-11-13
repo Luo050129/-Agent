@@ -1,0 +1,41 @@
+[interject] 开始
+  PASS  第一次请求就带上了插话
+  PASS  插话有明确标记
+  PASS  插话模板要求引用旧结果而不是重调
+  PASS  插话落到会话历史里
+  PASS  界面收到插话提示
+  PASS  插话队列被清空
+  PASS  第一步正常执行
+  PASS  插话在第二次请求里生效
+  PASS  消息配对没被插话打断
+  PASS  答复正常返回
+  PASS  重置前处于熔断状态
+  PASS  重置后放行
+  PASS  计数真的清零
+  PASS  重置原因记进报告
+  PASS  工具总量预算不被退回
+  PASS  工具预算仍然生效
+  PASS  没被执行到脚本末尾
+  PASS  出现了重规划事件
+  PASS  重规划换了新方向
+  PASS  旧步骤被标为作废
+  PASS  配对仍然完整
+  PASS  最终给了答复
+  PASS  取到两条（空串被忽略）
+  PASS  重复取不会拿到旧值
+  PASS  取完队列为空
+  PASS  上限是 5
+  PASS  没满时不挤人
+  PASS  满了会报告挤掉了
+  PASS  留的是最新 5 条
+  PASS  空文本不占位
+  PASS  内核只转 5 条
+  PASS  最早的两条被挤掉
+  PASS  最新的还在
+  PASS  配对没被破坏
+  PASS  插话触发了安全提示
+  PASS  系统提示被加固
+  PASS  超长插话原样保留（由上下文裁剪兜底）
+  PASS  插话模板没有额外膨胀
+  PASS  模板常量唯一
+[interject] 全部通过

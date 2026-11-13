@@ -1,0 +1,9 @@
+[client] 开始
+  PASS  5xx 自动重试后成功
+  PASS  记录了重试次数
+  PASS  401 直接报错
+  PASS  401 不重试
+  PASS  卡住会超时
+  PASS  没有无限等下去
+  PASS  连不上会报错
+[client] 全部通过

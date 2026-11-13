@@ -1,0 +1,18 @@
+[plugins] 开始
+  PASS  本地目录安装成功
+  PASS  读到插件元信息
+  PASS  插件出现在列表里
+  PASS  工具注册表里有插件工具
+  PASS  refresh 返回插件工具名
+  PASS  插件工具能执行
+  PASS  停用后工具消失
+  PASS  重新启用后工具回来
+  PASS  卸载后目录没了
+  PASS  卸载后工具没了
+  PASS  从仓库压缩包安装成功
+  PASS  能自动找到 plugin.py 所在目录
+  PASS  安装后工具可用
+  PASS  meta 里记了来源
+  PASS  缺 HANDLERS 的插件被拒绝
+  PASS  失败后不留垃圾目录
+[plugins] 全部通过

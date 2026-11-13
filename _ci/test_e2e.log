@@ -1,0 +1,5 @@
+[e2e] 开始
+  PASS  拿到最终答复
+  PASS  工具调用被正确拼接并执行
+  PASS  assistant 消息带 tool_calls 历史
+[e2e] 全部通过

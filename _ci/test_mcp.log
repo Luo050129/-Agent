@@ -1,0 +1,77 @@
+[mcp] 开始
+  PASS  坏条目被跳过
+  PASS  重名只留第一个
+  PASS  字符串 args 会切开
+  PASS  enabled 读得到
+  PASS  配置文件不存在返回空
+  PASS  工具名带前缀
+  PASS  超长名被截断
+  PASS  奇怪字符被替换
+  PASS  ERR 常量三处一致
+  PASS  $schema 被清掉
+  PASS  title 被清掉
+  PASS  additionalProperties 被清掉
+  PASS  definitions 被清掉
+  PASS  default 被清掉
+  PASS  枚举保留
+  PASS  required 保留
+  PASS  anyOf 降成单一类型
+  PASS  长描述被截断
+  PASS  工具描述被截断
+  PASS  压缩后 token 明显更少
+  PASS  单个工具 token 可控（<200）
+  PASS  预算生效
+  PASS  省下的进了降级列表
+  PASS  预算为 0 全降级
+  PASS  单个超预算也留一个
+  PASS  签名是一行
+  PASS  签名比完整定义省得多
+  PASS  纯文本原样返回
+  PASS  isError 加 [ERR]
+  PASS  图片换成元信息
+  PASS  空内容有占位
+  PASS  超长被截断
+  PASS  握手拿到 serverInfo
+  PASS  tools/list 有内容
+  PASS  工具带 inputSchema
+  PASS  tools/call 能拿到文本
+  PASS  参数正确传到了 server
+  PASS  server 报错走 isError
+  PASS  超时被拦下（1.0s）
+  PASS  进程崩溃能感知
+  PASS  崩溃后 alive 为假
+  PASS  close 之后连接不可用
+  PASS  stderr 被抽干并留了几行
+  PASS  命令不存在给出人话错误
+  PASS  配置读到了
+  PASS  未同步时没有工具
+  PASS  懒启动：没有子进程
+  PASS  同步成功
+  PASS  缓存落盘
+  PASS  工具名带 mcp__ 前缀
+  PASS  白名单生效：没同步进来的不出现
+  PASS  预算把工具挡掉了（7/22）
+  PASS  超预算时注册元工具
+  PASS  handler 和 schema 对得上
+  PASS  直接调用工具通
+  PASS  isError 转成 [ERR]
+  PASS  未知 server 有提示
+  PASS  未知工具回错误
+  PASS  图片不进上下文
+  PASS  超长结果被截断
+  PASS  元工具能调
+  PASS  元工具坏 JSON 有提示
+  PASS  有降级摘要
+  PASS  注入量不超预算
+  PASS  schema + 摘要一起算也不超预算
+  PASS  摘要比全量注入省 82%
+  PASS  状态里能看到已连接
+  PASS  状态里有工具数
+  PASS  close_all 之后断开
+  PASS  MCP 工具进了注册表
+  PASS  内置工具还在
+  PASS  MCP 工具算危险操作
+  PASS  DISPATCH 里有实现
+  PASS  execute 能调到 MCP
+  PASS  参数解析正常
+[mcp] 全部通过

@@ -1,0 +1,12 @@
+[models] 开始
+  PASS  目录里不止一个供应商
+  PASS  目录里不止一个模型
+  PASS  能按显示名找到模型
+  PASS  能按底层 model 名找到
+  PASS  找不到时返回 None
+  PASS  默认模型在目录里
+  PASS  LLM 走目录里的模型 id
+  PASS  LLM 记住显示名
+  PASS  请求地址拼接正确
+  PASS  切到其他供应商的模型
+[models] 全部通过
