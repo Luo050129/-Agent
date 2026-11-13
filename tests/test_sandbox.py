@@ -53,6 +53,14 @@ def test_normal_execution() -> list[tuple[str, bool]]:
     return checks
 
 
+def _safe_exists(p: Path) -> bool:
+    """探测越界靶子是否被写出来。Linux 上 stat /root/ 本身就 PermissionError。"""
+    try:
+        return p.exists()
+    except OSError:
+        return False
+
+
 def test_fs_guard() -> list[tuple[str, bool]]:
     _enable_default_roots()
     outside_read = runtime.run_python(f"open({NOPE!r}).read()")
@@ -67,7 +75,7 @@ def test_fs_guard() -> list[tuple[str, bool]]:
         ("pathlib 越界读被拦", "[SANDBOX]" in outside_pathlib),
         ("os.remove 越界被拦", "[SANDBOX]" in outside_unlink),
         ("shutil.rmtree 越界被拦", "[SANDBOX]" in outside_rmtree),
-        ("越界探针没被写出来", not Path(WRITE_NOPE).exists()),
+        ("越界探针没被写出来", not _safe_exists(Path(WRITE_NOPE))),
         ("拦截信息带允许范围", "允许读" in outside_read),
     ]
 
