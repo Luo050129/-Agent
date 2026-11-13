@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 _tmp/
 .venv/
+node_modules/
 Thumbs.db
 Desktop.ini
 *.log

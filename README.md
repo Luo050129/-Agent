@@ -75,6 +75,7 @@ python agent.py --selftest  # 不需要 Key 的整链自检
 | [`miniagent/ui`](miniagent/ui) | tkinter 界面（三套主题 + 自绘控件）与 CLI |
 | [`miniagent/plugins`](miniagent/plugins) · [`miniagent/skills`](miniagent/skills) | 扩展层：插件给能力，技能给方法 |
 | [`tests`](tests) | 24 个套件、约 1000 项断言，全部零依赖 |
+| [`ts-agent`](ts-agent) | **TypeScript 重写版**：同架构、零 npm 依赖，见 [ts-agent/README](ts-agent/README.md) |
 
 ## 文档
 

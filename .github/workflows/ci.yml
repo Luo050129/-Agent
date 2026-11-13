@@ -71,3 +71,21 @@ jobs:
           git push -f origin ci-logs
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+  node:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ts-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # TypeScript 版同样零 npm 依赖：Node 原生类型剥离跑 .ts，node --test 跑测试
+      - name: Selftest
+        run: npm run selftest
+
+      - name: Tests
+        run: npm test

@@ -1,0 +1,16 @@
+{
+  "name": "xu-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "墟的 TypeScript 版：零运行时依赖的终端 Agent",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types src/cli/main.ts",
+    "test": "node --experimental-strip-types --test \"tests/*.test.ts\"",
+    "selftest": "node --experimental-strip-types src/cli/main.ts --selftest"
+  },
+  "license": "MIT"
+}
