@@ -20,7 +20,8 @@ jobs:
       # GUI 冒烟测试需要真实显示器，CI 上跳过（本地跑 tests/test_gui.py）
       - name: Run test suites (non-GUI)
         run: |
-          pass=0; fail=0
+          set +e  # Actions 的 bash 默认 -e 会套件一失败就终止，这里要收集全部失败
+          pass=0; fail=0; failed=""
           mkdir -p _ci
           for f in tests/test_*.py; do
             name=$(basename "$f" .py)
@@ -30,11 +31,11 @@ jobs:
             echo "$name: $r"
             case "$r" in
               *"全部通过"*) pass=$((pass+1));;
-              *) fail=$((fail+1)); echo "::error::FAIL $name";;
+              *) fail=$((fail+1)); failed="$failed $name"; echo "::error::FAIL $name";;
             esac
           done
           python agent.py --selftest > "_ci/_selftest.log" 2>&1 || fail=$((fail+1))
-          echo "suites passed: $pass, failed: $fail"
+          echo "suites passed: $pass, failed: $fail ($failed)"
           [ "$fail" -eq 0 ]
 
       # 失败时把完整日志推到 ci-logs 分支，方便离线定位（成功时跳过）

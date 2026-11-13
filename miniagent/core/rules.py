@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -43,6 +44,8 @@ _WRITE_TARGET = re.compile(
     r"(?:>>?|\btee\b|\bcopy\b|\bmove\b|\bxcopy\b|\brobocopy\b)\s+(\"[^\"]+\"|'[^']+'|[^\s|;&>]+)"
 )
 _ABS_PATH = re.compile(r"^(?:[a-zA-Z]:[\\/]|\\\\|/)")
+# Windows 盘符 / UNC 路径：非 Windows 平台上 resolve 会把它当相对路径，必须特殊对待
+_DRIVE_PATH = re.compile(r"^[A-Za-z]:[/\\]|^\\\\")
 
 # shell 里的读目标：读文件类命令 + 绝对路径。没有这一道，`type C:\xxx` 就绕过了读白名单
 _READ_TARGET = re.compile(
@@ -77,8 +80,16 @@ def _norm(path: Path) -> Path:
 
 
 def inside(path: str | Path, roots: list[Path]) -> bool:
-    """路径是否落在允许的目录里。"""
-    target = _norm(Path(str(path)).expanduser())
+    """路径是否落在允许的目录里。
+
+    非 Windows 平台没有盘符语义：Linux 会把 C:/Windows/x.txt 当成相对路径
+    resolve 进 cwd，恰好落进白名单。模型输出 Windows 盘符路径大概率是想
+    越界，所以非 Windows 上一律视为越界。
+    """
+    raw = str(path)
+    if sys.platform != "win32" and _DRIVE_PATH.match(raw):
+        return False
+    target = _norm(Path(raw).expanduser())
     for root in roots:
         root_n = _norm(root)
         if target == root_n or root_n in target.parents:
