@@ -38,6 +38,14 @@ class CaptureSink implements Sink {
   states: TaskState[] = [];
   results: string[] = [];
   errors: string[] = [];
+  plans: Array<Array<{ goal: string; doneWhen: string }>> = [];
+  steps: string[] = [];
+  plan(steps: Array<{ goal: string; doneWhen: string }>): void {
+    this.plans.push(steps);
+  }
+  planStep(index: number, status: string): void {
+    this.steps.push(`${index}:${status}`);
+  }
   text(piece: string): void {
     void piece;
   }
@@ -159,4 +167,109 @@ test("裁剪后不留孤儿 tool 消息", () => {
     const prev = view[firstTool - 1];
     assert.ok(prev?.role === "assistant" && Array.isArray(prev.tool_calls), "tool 必须紧跟父消息");
   }
+});
+
+test("plan 模式先出计划再逐步执行", async () => {
+  class PlanLLM implements Streamable {
+    readonly label = "plan";
+    readonly model = "plan";
+    async stream(
+      messages: Message[],
+      tools: Array<Record<string, unknown>> | null,
+      onText?: (piece: string) => void,
+    ): Promise<{ text: string; calls: ToolCall[] }> {
+      if (tools === null) {
+        // 出计划
+        return { text: '[{"goal":"看看目录","done_when":"列出文件"}]', calls: [] };
+      }
+      if (messages.some((m) => m.role === "tool")) {
+        const text = "这一步做完了";
+        onText?.(text);
+        return { text, calls: [] };
+      }
+      return { text: "", calls: [call("list_dir", { path: "." })] };
+    }
+  }
+
+  const session = new Session();
+  session.addUser("看看项目");
+  const sink = new CaptureSink();
+  const answer = await new Agent(new PlanLLM(), { mode: "plan", maxSteps: 5 }).run(session, sink);
+
+  assert.ok(answer.includes("计划执行完毕"), answer);
+  assert.ok(answer.includes("看看目录"), "总结里要有步骤");
+  assert.equal(sink.plans.length, 1, "计划清单要发给界面");
+  assert.ok(sink.steps.includes("1:running"));
+  assert.ok(sink.steps.includes("1:done"));
+});
+
+test("验证通过才标已验证", async () => {
+  class VerifyLLM implements Streamable {
+    readonly label = "verify";
+    readonly model = "verify";
+    turns = 0;
+    async stream(
+      messages: Message[],
+      tools: Array<Record<string, unknown>> | null,
+    ): Promise<{ text: string; calls: ToolCall[] }> {
+      const last = messages[messages.length - 1];
+      const isProbe =
+        tools !== null && typeof last?.content === "string" && last.content.startsWith("只做一件事");
+      if (isProbe) {
+        // 探针：读回刚写的文件作为证据
+        return { text: "", calls: [call("list_dir", { path: "." }, "v1")] };
+      }
+      if (messages.some((m) => m.role === "tool")) {
+        return { text: "写好了", calls: [] };
+      }
+      this.turns += 1;
+      return { text: "", calls: [call("list_dir", { path: "." }, "c1")] };
+    }
+  }
+
+  const session = new Session();
+  session.addUser("列个目录");
+  const sink = new CaptureSink();
+  const answer = await new Agent(new VerifyLLM(), { maxSteps: 5 }).run(session, sink);
+  const last = sink.states.at(-1);
+
+  assert.equal(answer, "写好了");
+  assert.equal(last?.verified, true, "工具验证成功要标记");
+  assert.equal(last?.status, "done");
+});
+
+test("验证失败会打回返工", async () => {
+  class FailingVerifyLLM implements Streamable {
+    readonly label = "bad-verify";
+    readonly model = "bad-verify";
+    async stream(
+      messages: Message[],
+      tools: Array<Record<string, unknown>> | null,
+    ): Promise<{ text: string; calls: ToolCall[] }> {
+      const last = messages[messages.length - 1];
+      const isProbe =
+        tools !== null && typeof last?.content === "string" && last.content.startsWith("只做一件事");
+      if (isProbe) {
+        // 读一个不存在的文件：验证必然失败
+        return {
+          text: "",
+          calls: [call("read_file", { path: "no_such_file_xyz.txt" }, "v1")],
+        };
+      }
+      if (messages.some((m) => m.role === "tool")) return { text: "这次真的好了", calls: [] };
+      return { text: "", calls: [call("list_dir", { path: "." }, "c1")] };
+    }
+  }
+
+  const session = new Session();
+  session.addUser("列个目录");
+  const sink = new CaptureSink();
+  const answer = await new Agent(new FailingVerifyLLM(), { maxSteps: 5 }).run(session, sink);
+
+  const rework = session.messages.filter(
+    (m) => m.role === "user" && String(m.content).startsWith("[验证未通过]"),
+  );
+  assert.equal(rework.length, 1, "应注入一次返工提示");
+  assert.equal(answer, "这次真的好了");
+  assert.equal(sink.states.at(-1)?.verified, false, "没验证成功就不能标记");
 });

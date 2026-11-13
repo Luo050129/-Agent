@@ -4,6 +4,7 @@
  * 内核只认 Sink 的九个方法，换界面（TUI / Web / JSON 管道）只换这一层。
  */
 
+import type { PlanStep } from "../core/plan.ts";
 import type { Sink, TaskState } from "../core/loop.ts";
 
 const useColor = process.stdout.isTTY === true;
@@ -47,6 +48,22 @@ export class ConsoleSink implements Sink {
     process.stdout.write(`\n${c.yellow(message)}\n`);
   }
 
+  /** 计划清单：一次打印全部步骤 */
+  plan(steps: PlanStep[]): void {
+    this.streamed = false;
+    process.stdout.write(`\n${c.cyan("计划")}（${steps.length} 步）\n`);
+    steps.forEach((step, index) => {
+      process.stdout.write(`  ${index + 1}. ${step.goal}\n     ${c.dim(`完成标准：${step.doneWhen}`)}\n`);
+    });
+    process.stdout.write("\n");
+  }
+
+  planStep(index: number, status: "running" | "done" | "failed", note?: string): void {
+    const mark = status === "running" ? "▶" : status === "done" ? "✓" : "✗";
+    const paint = status === "failed" ? c.red : status === "done" ? c.green : c.cyan;
+    process.stdout.write(`${paint(`${mark} 第 ${index} 步`)}${note ? ` ${c.dim(note)}` : ""}\n`);
+  }
+
   /** 收尾时打一行统计 */
   printState(): void {
     const st = this.lastState;
@@ -54,9 +71,10 @@ export class ConsoleSink implements Sink {
     if (this.streamed) process.stdout.write("\n");
     this.streamed = false;
     const ratio = Math.round(st.contextTokens === 0 ? 0 : (st.contextTokens / st.contextBudget) * 100);
+    const verified = st.verified ? " · 已验证" : "";
     process.stdout.write(
       c.dim(
-        `上下文 ${ratio}%（${st.contextTokens}/${st.contextBudget} tok）· 工具 ${st.toolCalls} 次 · 完成度 ${Math.round(st.completion * 100)}%\n`,
+        `上下文 ${ratio}%（${st.contextTokens}/${st.contextBudget} tok）· 工具 ${st.toolCalls} 次 · 完成度 ${Math.round(st.completion * 100)}%${verified}\n`,
       ),
     );
   }

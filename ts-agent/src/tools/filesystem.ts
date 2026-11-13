@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { BASE_DIR } from "../config.ts";
 import { ERR } from "../markers.ts";
+import * as checkpoints from "./checkpoints.ts";
 import { truncate } from "./util.ts";
 
 /** 允许读/写的根目录，可用环境变量追加（分号分隔） */
@@ -65,12 +66,14 @@ function writeFile(args: Record<string, unknown>): string {
     return `${ERR}写入范围之外，只允许写：${roots("write").join("、")}`;
   }
   const content = String(args["content"] ?? "");
+  const snap = checkpoints.snapshot(path); // 先快照；快照失败不挡写入，只是这次不能撤销
   try {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, content, "utf8");
   } catch (err) {
     return `${ERR}写入失败：${(err as Error).message}`;
   }
+  checkpoints.save(snap); // 写入成功才落盘，避免"撤销一个没发生的写入"
   return `已写入 ${path}（${content.length} 字符）`;
 }
 

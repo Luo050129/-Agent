@@ -6,11 +6,13 @@ Python 版的同架构重写。保留了「零运行时依赖」这个底线：*
 ```bash
 node --version          # 需要 >= 22.6
 npm run selftest        # 无 Key 自检整条链路
-npm test                # 38 项测试
+npm test                # 75 项测试
 
 # 用起来（先配 Key：环境变量或 ts-agent/.env）
 node --experimental-strip-types src/cli/main.ts "统计这个目录有多少文件"
-node --experimental-strip-types src/cli/main.ts            # 交互模式
+node --experimental-strip-types src/cli/main.ts --mode plan "把项目文档整理一遍"
+node --experimental-strip-types src/cli/main.ts --resume   # 接着上次的会话
+node --experimental-strip-types src/cli/main.ts            # 交互模式（/undo /clear）
 ```
 
 ## 为什么不用 npm 依赖
@@ -40,15 +42,15 @@ node --experimental-strip-types src/cli/main.ts            # 交互模式
 | `core/context.py` | `src/core/context.ts` | ✅ 完成（预算折叠 + 工具结果压缩 + 孤儿修复） |
 | `core/prompt.py` | `src/core/prompt.ts` | ✅ 完成 |
 | `core/loop.py`（ReAct） | `src/core/loop.ts` | ✅ 完成 |
-| `core/loop.py`（Plan 模式） | — | ⬜ 待做 |
-| `core/completion.py` 验证式自检 | — | ⬜ 待做 |
-| `core/persistence.py` 会话存档 | — | ⬜ 待做 |
+| `core/loop.py`（Plan 模式） | `src/core/plan.ts` + loop 内 runPlan | ✅ 完成（含卡住重规划一次） |
+| `core/completion.py` 验证式自检 | `src/core/completion.ts` | ✅ 完成（工具反证 + NOVERIFY 放行） |
+| `core/persistence.py` 会话存档 | `src/core/persistence.ts` | ✅ 完成（JSONL + 崩溃修复 + --resume） |
 | `tools/sandbox.py` 沙箱 | — | ⬜ 待做（Node 无 Job Object，需另想） |
-| `tools/checkpoints.py` 撤销 | — | ⬜ 待做 |
+| `tools/checkpoints.py` 撤销 | `src/tools/checkpoints.ts` | ✅ 完成（环形 20 + `/undo`） |
 | `mcp/*` | — | ⬜ 待做（可用官方 SDK） |
 | `plugins/*` `skills/*` | — | ⬜ 待做 |
 | `ui/*` tkinter 界面 | `src/cli/*` 终端 | 部分：终端输出已通，TUI 待做 |
-| 24 个测试套件 | 4 个套件 38 项 | 部分 |
+| 24 个测试套件 | 8 个套件 75 项 | 部分（核心逻辑全覆盖） |
 
 ## 语言差异带来的设计调整
 
@@ -63,9 +65,13 @@ node --experimental-strip-types src/cli/main.ts            # 交互模式
 假模型注入（`ScriptLLM implements Streamable`）驱动真实循环，不碰网络：
 
 ```
-tests/tokens.test.ts    估算与截断（8 项）
-tests/guard.test.ts     失败判定、重复调用、连续失败、人话报告（6 项）
-tests/kernel.test.ts    闭环、越界拦截、熔断、步数上限、预算折叠（8 项）
-tests/protocol.test.ts  请求形状、SSE 分块、tool_calls 拼装（7 项）
-tests/tools.test.ts     执行器容错、边界、命令执行（9 项）
+tests/tokens.test.ts       估算与截断（8 项）
+tests/guard.test.ts        失败判定、重复调用、连续失败、人话报告（6 项）
+tests/kernel.test.ts       闭环、越界拦截、熔断、步数上限、预算折叠、Plan 模式、验证返工（11 项）
+tests/protocol.test.ts     请求形状、SSE 分块、tool_calls 拼装（7 项）
+tests/tools.test.ts        执行器容错、边界、命令执行（9 项）
+tests/plan.test.ts         计划 JSON 抠取、步骤上限、重规划、总结（9 项）
+tests/completion.test.ts   快判打分、验证四种结果（10 项）
+tests/persistence.test.ts  落盘、恢复、崩溃修复、列表与 resume（7 项）
+tests/checkpoints.test.ts  撤销语义、链式回退、环形上限、二进制（7 项）
 ```

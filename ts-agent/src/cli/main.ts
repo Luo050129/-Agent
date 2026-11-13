@@ -3,16 +3,22 @@
  *
  * 用法：
  *   node --experimental-strip-types src/cli/main.ts "统计这个项目有多少文件"
- *   node --experimental-strip-types src/cli/main.ts -p "..." --model deepseek-chat
+ *   node --experimental-strip-types src/cli/main.ts --mode plan "..."
+ *   node --experimental-strip-types src/cli/main.ts --resume last
  *   node --experimental-strip-types src/cli/main.ts --selftest
+ *
+ * 交互里：/undo 撤销写入、/clear 开新会话、/exit 退出。
  */
 
 import { createInterface } from "node:readline/promises";
 import { ConfigError, loadEnv } from "../config.ts";
+import { normalizeMode } from "../core/plan.ts";
+import { SessionStore } from "../core/persistence.ts";
 import { Agent, type Streamable } from "../core/loop.ts";
 import { Session } from "../core/session.ts";
 import { systemPrompt } from "../core/prompt.ts";
 import { LLM } from "../model/client.ts";
+import { undoLast } from "../tools/checkpoints.ts";
 import type { Message, ToolCall } from "../wire.ts";
 import { ConsoleSink, color } from "./sink.ts";
 
@@ -22,12 +28,15 @@ interface Args {
   baseUrl?: string;
   apiKey?: string;
   maxSteps: number;
+  mode: string;
+  resume?: string;
+  persist: boolean;
   selftest: boolean;
   help: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { maxSteps: 20, selftest: false, help: false };
+  const args: Args = { maxSteps: 20, mode: "react", persist: true, selftest: false, help: false };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i] as string;
     const next = (): string => {
@@ -54,6 +63,15 @@ function parseArgs(argv: string[]): Args {
       case "--max-steps":
         args.maxSteps = Number.parseInt(next(), 10) || 20;
         break;
+      case "--mode":
+        args.mode = next();
+        break;
+      case "--resume":
+        args.resume = argv[i + 1]?.startsWith("-") ? "last" : next();
+        break;
+      case "--no-persist":
+        args.persist = false;
+        break;
       case "--selftest":
         args.selftest = true;
         break;
@@ -62,7 +80,6 @@ function parseArgs(argv: string[]): Args {
         args.help = true;
         break;
       default:
-        // 不是选项就当一次性提问
         if (!flag.startsWith("-") && args.prompt === undefined) args.prompt = flag;
         break;
     }
@@ -70,7 +87,7 @@ function parseArgs(argv: string[]): Args {
   return args;
 }
 
-/** 自检用假模型：第一轮要工具，第二轮给答复，不碰网络 */
+/** 自检用假模型：第一轮要工具，第二轮给答复，验证探针回 NOVERIFY */
 class ScriptedLLM implements Streamable {
   readonly label = "fake-scripted";
   readonly model = "fake-scripted";
@@ -78,25 +95,30 @@ class ScriptedLLM implements Streamable {
 
   async stream(
     messages: Message[],
-    _tools: Array<Record<string, unknown>> | null,
+    tools: Array<Record<string, unknown>> | null,
     onText?: (piece: string) => void,
   ): Promise<{ text: string; calls: ToolCall[] }> {
-    this.turns += 1;
-    if (!messages.some((m) => m.role === "tool")) {
-      return {
-        text: "",
-        calls: [
-          {
-            id: "call_selftest",
-            type: "function",
-            function: { name: "list_dir", arguments: JSON.stringify({ path: "." }) },
-          },
-        ],
-      };
+    // 验证探针带工具、且最后一条是 VERIFY 提示
+    const last = messages[messages.length - 1];
+    if (tools && typeof last?.content === "string" && last.content.startsWith("只做一件事")) {
+      return { text: "NOVERIFY: 自检不涉及产物", calls: [] };
     }
-    const text = "自检通过：模型→工具→回灌→答复 链路正常。";
-    onText?.(text);
-    return { text, calls: [] };
+    if (Array.isArray(messages) && messages.some((m) => m.role === "tool")) {
+      const text = "自检通过：模型→工具→回灌→答复 链路正常。";
+      onText?.(text);
+      return { text, calls: [] };
+    }
+    this.turns += 1;
+    return {
+      text: "",
+      calls: [
+        {
+          id: "call_selftest",
+          type: "function",
+          function: { name: "list_dir", arguments: JSON.stringify({ path: "." }) },
+        },
+      ],
+    };
   }
 }
 
@@ -113,26 +135,51 @@ async function selftest(): Promise<boolean> {
   return ok;
 }
 
+function printHelp(): void {
+  console.log(
+    [
+      "用法：node --experimental-strip-types src/cli/main.ts [选项] [问题]",
+      "",
+      "  -p, --prompt <文本>   一次性执行",
+      "  -m, --model <名字>    模型名",
+      "      --base-url <地址> OpenAI 兼容接口地址",
+      "      --api-key <key>   直接传 Key（默认读环境变量或 .env）",
+      "      --max-steps <n>   单轮最大步数，默认 20",
+      "      --mode <react|plan>  边做边看 / 先出计划，默认 react",
+      "      --resume [id]     恢复历史会话，省略 id 就是最近一次",
+      "      --no-persist      本次对话不落盘",
+      "      --selftest        无 Key 自检整条链路",
+      "",
+      "交互命令：/undo 撤销最近一次写入 · /clear 开新会话 · /exit 退出",
+    ].join("\n"),
+  );
+}
+
+/** 建会话：需要存档就挂上，--resume 则从磁盘恢复 */
+function openSession(args: Args): { session: Session; store: SessionStore | null } {
+  if (!args.persist) return { session: new Session(systemPrompt()), store: null };
+
+  if (args.resume) {
+    const store = SessionStore.resume(args.resume);
+    const session = store.load();
+    console.log(color.dim(`已恢复会话 ${store.sessionId}（${store.title || "未命名"}）`));
+    return { session, store };
+  }
+
+  const store = new SessionStore();
+  const session = new Session(systemPrompt());
+  store.attach(session);
+  return { session, store };
+}
+
 async function main(): Promise<number> {
   loadEnv();
   const args = parseArgs(process.argv.slice(2));
 
   if (args.help) {
-    console.log(
-      [
-        "用法：node --experimental-strip-types src/cli/main.ts [选项] [问题]",
-        "",
-        "  -p, --prompt <文本>   一次性执行",
-        "  -m, --model <名字>    模型名",
-        "      --base-url <地址> OpenAI 兼容接口地址",
-        "      --api-key <key>   直接传 Key（默认读环境变量或 .env）",
-        "      --max-steps <n>   单轮最大步数，默认 20",
-        "      --selftest        无 Key 自检整条链路",
-      ].join("\n"),
-    );
+    printHelp();
     return 0;
   }
-
   if (args.selftest) return (await selftest()) ? 0 : 1;
 
   let llm: LLM;
@@ -146,9 +193,10 @@ async function main(): Promise<number> {
     throw err;
   }
 
-  const session = new Session(systemPrompt());
+  const mode = normalizeMode(args.mode);
+  let { session, store } = openSession(args);
   const sink = new ConsoleSink();
-  const agent = new Agent(llm, { maxSteps: args.maxSteps });
+  const agent = new Agent(llm, { maxSteps: args.maxSteps, mode });
 
   if (args.prompt) {
     session.addUser(args.prompt);
@@ -157,9 +205,10 @@ async function main(): Promise<number> {
     return answer ? 0 : 1;
   }
 
-  console.log(
-    `${color.cyan("墟")}  模型 ${llm.label}  （exit 退出，/clear 清空上下文）`,
-  );
+  const archive = store ? color.dim(` · 存档 ${store.sessionId}`) : "";
+  console.log(`${color.cyan("墟")}  模型 ${llm.label} · 模式 ${mode}${archive}`);
+  console.log(color.dim("（exit 退出，/undo 撤销写入，/clear 新会话）"));
+
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {
     for (;;) {
@@ -175,9 +224,21 @@ async function main(): Promise<number> {
         console.log("再见。");
         return 0;
       }
+      if (input === "/undo") {
+        console.log(color.dim(undoLast()));
+        continue;
+      }
       if (input === "/clear") {
-        session.reset();
-        console.log(color.dim("上下文已清空。"));
+        // 旧存档留着，新开一份
+        if (args.persist) {
+          const fresh = new SessionStore();
+          session = new Session(systemPrompt());
+          fresh.attach(session);
+          store = fresh;
+        } else {
+          session.reset();
+        }
+        console.log(color.dim("已开新会话，旧的留在存档里。"));
         continue;
       }
 
